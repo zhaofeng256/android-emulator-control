@@ -1,0 +1,1 @@
+adb.exe -s emulator-5556 shell sh /data/local/tmp/run.sh
