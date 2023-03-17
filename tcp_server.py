@@ -59,7 +59,7 @@ class TcpServerService(object):
 
     def thread_send(self, client, address):
         while True:
-            msg = 'hello this is server'
+            msg = 'hello this is server\n'
             try:
                 sleep(1)
                 print('send hello')
