@@ -1,3 +1,4 @@
+import ctypes
 import socket
 import signal
 import sys
@@ -6,11 +7,6 @@ from os import error
 from time import sleep
 
 
-def signal_handler(signal, frame):
-    print('exit')
-    sys.exit(0)
-
-signal.signal(signal.SIGINT, signal_handler)
 def test_tcp_server():
 
     s = socket.socket()
@@ -28,8 +24,31 @@ def test_tcp_server():
         msg = c.recv(1024)
         print('recv :', msg)
 
+tcp_data_list = []
+tcp_list_cv = threading.Condition()
+tcp_data_id = 0
+class TcpData(ctypes.Structure):
+    _fields_ = [
+        ("id", ctypes.c_int),
+        ("type", ctypes.c_char),
+        ("param1", ctypes.c_int),
+        ("param2", ctypes.c_int),
+    ]
+
+def tcp_data_append(data):
+
+    with tcp_list_cv:
+        data.id = tcp_data_id
+        tcp_data_list.append(data)
+        tcp_list_cv.notify_all()
+def tcp_data_pop():
+    with tcp_list_cv:
+        while not len(tcp_data_list):
+            tcp_list_cv.wait()
+        return tcp_data_list.pop()
 
 class TcpServerService(object):
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -53,34 +72,27 @@ class TcpServerService(object):
             client, addr = self.sock.accept()
             print('accepted: %s' % (addr,))
             client.settimeout(60)
+
             snd = threading.Thread(target=self.thread_send, args=(client, addr))
             snd.daemon = True
             snd.start()
 
     def thread_send(self, client, address):
         while True:
-            msg = 'hello this is server\n'
+            send_data = tcp_data_pop();
+
+            print('send',send_data.id, send_data.type, send_data.param1, send_data.param2)
+
             try:
-                sleep(1)
-                print('send hello')
-                client.send(str.encode(msg))
-                data = client.recv(1024)
-                if data:
-                    print('recv:', data)
+                client.send(bytearray(send_data))
+                recv_data = client.recv(1024)
+                if recv_data:
+                    print('recv:', recv_data)
                 else:
                     raise error('client disconnected')
-            except:
-                print('client close')
+            except Exception as e:
+                print(e)
                 client.close()
                 return False
-
-if __name__ == "__main__":
-
-    svc = TcpServerService('', 65432)
-    ret = svc.start()
-    if ret == 0:
-        print('start tcp server successfully')
-    while True:
-        sleep(1)
 
 
