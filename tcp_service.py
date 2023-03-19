@@ -26,11 +26,11 @@ def test_tcp_server():
 
 tcp_data_list = []
 tcp_list_cv = threading.Condition()
-tcp_data_id = 0
+
 class TcpData(ctypes.Structure):
     _fields_ = [
         ("id", ctypes.c_int),
-        ("type", ctypes.c_char),
+        ("type", ctypes.c_int8),
         ("param1", ctypes.c_int),
         ("param2", ctypes.c_int),
     ]
@@ -38,7 +38,8 @@ class TcpData(ctypes.Structure):
 def tcp_data_append(data):
 
     with tcp_list_cv:
-        data.id = tcp_data_id
+        TcpServerService.tcp_data_id += 1
+        data.id = TcpServerService.tcp_data_id
         tcp_data_list.append(data)
         tcp_list_cv.notify_all()
 def tcp_data_pop():
@@ -48,7 +49,7 @@ def tcp_data_pop():
         return tcp_data_list.pop()
 
 class TcpServerService(object):
-
+    tcp_data_id = 0
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -80,7 +81,7 @@ class TcpServerService(object):
     def thread_send(self, client, address):
         while True:
             send_data = tcp_data_pop();
-
+            print("len of send_data", sys.getsizeof(send_data))
             print('send',send_data.id, send_data.type, send_data.param1, send_data.param2)
 
             try:
