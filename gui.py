@@ -7,6 +7,10 @@ import re
 import threading
 import time
 
+import defs
+from keyborad_service import KeyboardService
+from mouse_service import MouseService
+from tcp_service import TcpServerService
 
 class WinForm(QWidget):
     def __init__(self):
@@ -18,7 +22,7 @@ class WinForm(QWidget):
         )
 
         layout = QGridLayout()
-        layout.setColumnStretch(3, 3)
+        layout.setColumnStretch(3, 4)
         self.setLayout(layout)
 
         self.cell_width = 100
@@ -67,6 +71,11 @@ class WinForm(QWidget):
         self.bt_not_point.setFixedSize(self.cell_width, self.cell_hight)
         self.bt_not_point.clicked.connect(self.bt_not_point_clicked)
         layout.addWidget(self.bt_not_point, 2, 2, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_stop_move = QPushButton("stop_move", self)
+        self.bt_stop_move.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_stop_move.clicked.connect(self.bt_stop_move_clicked)
+        layout.addWidget(self.bt_stop_move, 3, 0, 1, 1, QtCore.Qt.AlignCenter)
 
         self.running = False
         self.bt_stop_run.setDisabled(True)
@@ -147,6 +156,7 @@ class WinForm(QWidget):
         ]
         self.run_script(script)
 
+
     def run_script(self, script):
         device_name = self.combobox_devices.currentText()
         cmd = "adb -s " + device_name + " "
@@ -157,8 +167,14 @@ class WinForm(QWidget):
             out = pipe.communicate()[0]
             print(out.decode())
 
-
+    def bt_stop_move_clicked(self):
+        MouseService.stop_move = ~MouseService.stop_move
 def main():
+
+    TcpServerService('', defs.TCP_PORT).start()
+    MouseService.start()
+    KeyboardService.start()
+
     app = QtWidgets.QApplication(sys.argv)
     wf = WinForm()
     wf.bt_refresh_clicked()

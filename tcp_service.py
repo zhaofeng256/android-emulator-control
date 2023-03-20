@@ -3,7 +3,7 @@ import struct
 import threading
 from os import error
 from ctypes import sizeof
-
+import binascii
 tcp_data_list = []
 tcp_list_cv = threading.Condition()
 
@@ -37,6 +37,7 @@ class TcpServerService(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             self.sock.bind((self.host, self.port))
             lst = threading.Thread(target=self.thread_listen, args=())
             lst.daemon = True
@@ -61,22 +62,26 @@ class TcpServerService(object):
         while True:
             send_data = tcp_data_pop()
             # print("len of send_data", sys.getsizeof(send_data))
-            print('send', int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
-                  int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
-                  send_data.checksum)
+            # print('send', int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
+            #       int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
+            #       send_data.checksum)
 
-            sz = sizeof(send_data)
 
             try:
-                if client.send(bytearray(send_data)) != sz:
+                sz = sizeof(send_data)
+                sent = client.send(bytearray(send_data))
+                res = ''.join(format(x, '02x') for x in bytearray(send_data))
+                print('send', str(res))
+                # print('sent=',sent,'size=',sz)
+                if sent != sz:
                     print('send length error')
 
-                recv_data = client.recv(1024)
-                if recv_data:
-                    # print('recv:', recv_data)
-                    pass
-                else:
-                    raise error('client disconnected')
+                # recv_data = client.recv(1024)
+                # if recv_data:
+                #     # print('recv:', recv_data)
+                #     pass
+                # else:
+                #     raise error('client disconnected')
             except Exception as e:
                 print(e)
                 client.close()
