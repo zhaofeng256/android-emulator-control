@@ -1,55 +1,34 @@
-import ctypes
 import socket
-import signal
-import sys
+import struct
 import threading
 from os import error
-from time import sleep
-
-
-def test_tcp_server():
-
-    s = socket.socket()
-    host_name = socket.gethostname()
-    host = socket.gethostbyname(host_name)
-    print('host ip:' + host)
-    port = 65432
-    s.bind((host, port))
-    s.listen(5)
-    c, addr = s.accept()
-    print('accepted: %s' % (addr,))
-    c.send(str.encode('hello this is server'))
-
-    while True:
-        msg = c.recv(1024)
-        print('recv :', msg)
+from ctypes import sizeof
 
 tcp_data_list = []
 tcp_list_cv = threading.Condition()
 
-class TcpData(ctypes.Structure):
-    _fields_ = [
-        ("id", ctypes.c_int),
-        ("type", ctypes.c_int8),
-        ("param1", ctypes.c_int),
-        ("param2", ctypes.c_int),
-    ]
+from defs import *
+
 
 def tcp_data_append(data):
-
     with tcp_list_cv:
         TcpServerService.tcp_data_id += 1
-        data.id = TcpServerService.tcp_data_id
+        set_id(data, TcpServerService.tcp_data_id)
+        set_chksum(data)
         tcp_data_list.append(data)
         tcp_list_cv.notify_all()
+
+
 def tcp_data_pop():
     with tcp_list_cv:
         while not len(tcp_data_list):
             tcp_list_cv.wait()
-        return tcp_data_list.pop()
+        return tcp_data_list.pop(0)
+
 
 class TcpServerService(object):
     tcp_data_id = 0
+
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -80,20 +59,25 @@ class TcpServerService(object):
 
     def thread_send(self, client, address):
         while True:
-            send_data = tcp_data_pop();
-            print("len of send_data", sys.getsizeof(send_data))
-            print('send',send_data.id, send_data.type, send_data.param1, send_data.param2)
+            send_data = tcp_data_pop()
+            # print("len of send_data", sys.getsizeof(send_data))
+            print('send', int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
+                  int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
+                  send_data.checksum)
+
+            sz = sizeof(send_data)
 
             try:
-                client.send(bytearray(send_data))
+                if client.send(bytearray(send_data)) != sz:
+                    print('send length error')
+
                 recv_data = client.recv(1024)
                 if recv_data:
-                    print('recv:', recv_data)
+                    # print('recv:', recv_data)
+                    pass
                 else:
                     raise error('client disconnected')
             except Exception as e:
                 print(e)
                 client.close()
                 return False
-
-
