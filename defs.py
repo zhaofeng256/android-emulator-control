@@ -32,7 +32,6 @@ def set_param2(data, val):
 
 
 def set_chksum(data):
-    return
     sz = sizeof(data)
     if sz == sizeof(TcpData):
         val = calc_chksum(data, sz - 2)
@@ -53,7 +52,8 @@ def calc_chksum(data, length):
         s += bs[i]
 
     s = s & 0xffff + (s >> 16)
-    return ~s & 0xffff
+    s = ~s & 0xffff
+    return s
 
 
 class EventType():

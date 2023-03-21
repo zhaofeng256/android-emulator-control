@@ -70,18 +70,19 @@ class TcpServerService(object):
             try:
                 sz = sizeof(send_data)
                 sent = client.send(bytearray(send_data))
-                res = ''.join(format(x, '02x') for x in bytearray(send_data))
-                print('send', str(res))
-                # print('sent=',sent,'size=',sz)
+                res = ' '.join(format(x, '02x') for x in bytearray(send_data))
+                #print('send', str(res))
+                print(bytearray(send_data))
+                #print('sent=',sent,'size=',sz)
                 if sent != sz:
                     print('send length error')
 
-                # recv_data = client.recv(1024)
-                # if recv_data:
-                #     # print('recv:', recv_data)
-                #     pass
-                # else:
-                #     raise error('client disconnected')
+                recv_data = client.recv(1024)
+                if recv_data:
+                    print('recv:', recv_data)
+                    pass
+                else:
+                    raise error('client disconnected')
             except Exception as e:
                 print(e)
                 client.close()
