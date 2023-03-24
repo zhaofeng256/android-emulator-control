@@ -77,6 +77,11 @@ class WinForm(QWidget):
         self.bt_stop_move.clicked.connect(self.bt_stop_move_clicked)
         layout.addWidget(self.bt_stop_move, 3, 0, 1, 1, QtCore.Qt.AlignCenter)
 
+
+        self.bt_start_coyote = QPushButton("coyote", self)
+        self.bt_start_coyote.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_start_coyote.clicked.connect(self.bt_start_coyote_clicked)
+        layout.addWidget(self.bt_start_coyote, 3, 1, 1, 1, QtCore.Qt.AlignCenter)
         self.running = False
         self.bt_stop_run.setDisabled(True)
 
@@ -156,7 +161,13 @@ class WinForm(QWidget):
         ]
         self.run_script(script)
 
-
+    def bt_start_coyote_clicked(self):
+        script = [
+            'shell am start -n com.zf.coyote/com.zf.coyote.MainActivity',
+            'shell sleep 2',
+            'shell am start -n com.tencent.tmgp.cod/com.tencent.tmgp.cod.CODMainActivity'
+        ]
+        self.run_script(script)
     def run_script(self, script):
         device_name = self.combobox_devices.currentText()
         cmd = "adb -s " + device_name + " "
@@ -168,7 +179,11 @@ class WinForm(QWidget):
             print(out.decode())
 
     def bt_stop_move_clicked(self):
-        MouseService.stop_move = ~MouseService.stop_move
+        if (MouseService.stop_move == 0):
+            MouseService.stop_move = 1
+        else:
+            MouseService.stop_move = 0
+        print(MouseService.stop_move)
 def main():
 
     TcpServerService('', defs.TCP_PORT).start()

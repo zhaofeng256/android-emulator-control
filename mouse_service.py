@@ -1,4 +1,5 @@
 import threading
+import time
 
 import mouse
 
@@ -16,7 +17,7 @@ def mouse_event_callback(evt):
         data.type = EventType.TYPE_MOUSE
         set_param1(data, evt.x)
         set_param2(data, evt.y)
-        # print('move', evt.x, evt.y)
+        #print('move', evt.x, evt.y, time.time())
     elif t == mouse._mouse_event.ButtonEvent:
         data.type = EventType.TYPE_BUTTON
         if evt.button == 'left':
@@ -36,7 +37,7 @@ def mouse_event_callback(evt):
         #print('button', evt.button, evt.event_type)
     elif t == mouse._mouse_event.WheelEvent:
         if MouseService.stop_move:
-            return
+             return
         data.type = EventType.TYPE_WHEEL
         if evt.delta == -1.0:
             set_param1(data, WheelEvent.ROLL_BACK)

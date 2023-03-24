@@ -16,7 +16,7 @@ def key_event_callback(evt):
         set_param2(data, KeyEvent.KEY_UP)
 
     tcp_service.tcp_data_append(data)
-    print(evt.name, evt.event_type)
+    print(evt.name, evt.scan_code, evt.event_type)
 
 
 def thread_key():

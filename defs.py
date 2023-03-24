@@ -52,15 +52,14 @@ def calc_chksum(data, length):
         s += bs[i]
 
     s = s & 0xffff + (s >> 16)
-    s = ~s & 0xffff
-    return s
+    return ~s & 0xffff
 
 
 class EventType():
     TYPE_KEYBOARD = 0x0
     TYPE_MOUSE = 0x1
     TYPE_BUTTON = 0x2
-    TYPE_WHEEL = 0x4
+    TYPE_WHEEL = 0x3
 
 
 class KeyEvent():

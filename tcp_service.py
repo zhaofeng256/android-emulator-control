@@ -38,6 +38,7 @@ class TcpServerService(object):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             self.sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_DONTROUTE, 1)
             self.sock.bind((self.host, self.port))
             lst = threading.Thread(target=self.thread_listen, args=())
             lst.daemon = True
@@ -77,12 +78,12 @@ class TcpServerService(object):
                 if sent != sz:
                     print('send length error')
 
-                recv_data = client.recv(1024)
-                if recv_data:
-                    print('recv:', recv_data)
-                    pass
-                else:
-                    raise error('client disconnected')
+                # recv_data = client.recv(1024)
+                # if recv_data:
+                #     print('recv:', recv_data)
+                #     pass
+                # else:
+                #     raise error('client disconnected')
             except Exception as e:
                 print(e)
                 client.close()
