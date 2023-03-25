@@ -28,7 +28,7 @@ def tcp_data_pop():
 
 class TcpServerService(object):
     tcp_data_id = 0
-
+    stop_send = 0
     def __init__(self, host, port):
         self.host = host
         self.port = port
@@ -69,11 +69,12 @@ class TcpServerService(object):
 
 
             try:
+                if TcpServerService.stop_send:
+                    continue
                 sz = sizeof(send_data)
                 sent = client.send(bytearray(send_data))
                 res = ' '.join(format(x, '02x') for x in bytearray(send_data))
-                #print('send', str(res))
-                print(bytearray(send_data))
+                print('send', str(res))
                 #print('sent=',sent,'size=',sz)
                 if sent != sz:
                     print('send length error')

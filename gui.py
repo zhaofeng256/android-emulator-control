@@ -82,6 +82,12 @@ class WinForm(QWidget):
         self.bt_start_coyote.setFixedSize(self.cell_width, self.cell_hight)
         self.bt_start_coyote.clicked.connect(self.bt_start_coyote_clicked)
         layout.addWidget(self.bt_start_coyote, 3, 1, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_stop_send = QPushButton("stop_send", self)
+        self.bt_stop_send.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_stop_send.clicked.connect(self.bt_stop_send_clicked)
+        layout.addWidget(self.bt_stop_send, 3, 2, 1, 1, QtCore.Qt.AlignCenter)
+
         self.running = False
         self.bt_stop_run.setDisabled(True)
 
@@ -142,7 +148,7 @@ class WinForm(QWidget):
         script = [
             "shell am start -n com.customscopecommunity.crosshairpro/.MainActivity",
             "shell sleep 2",
-            "shell input tap 543 1132",
+            "shell input tap 543 113w2",
             "shell am start -n com.tencent.tmgp.cod/com.tencent.tmgp.cod.CODMainActivity"
         ]
         self.run_script(script)
@@ -183,7 +189,10 @@ class WinForm(QWidget):
             MouseService.stop_move = 1
         else:
             MouseService.stop_move = 0
-        print(MouseService.stop_move)
+
+    def bt_stop_send_clicked(self):
+        TcpServerService.stop_send = 1 - TcpServerService.stop_send
+
 def main():
 
     TcpServerService('', defs.TCP_PORT).start()
