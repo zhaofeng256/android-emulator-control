@@ -63,9 +63,9 @@ class TcpServerService(object):
         while True:
             send_data = tcp_data_pop()
             # print("len of send_data", sys.getsizeof(send_data))
-            # print('send', int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
-            #       int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
-            #       send_data.checksum)
+            print(int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
+                   int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
+                   send_data.checksum)
 
 
             try:
@@ -73,8 +73,8 @@ class TcpServerService(object):
                     continue
                 sz = sizeof(send_data)
                 sent = client.send(bytearray(send_data))
-                res = ' '.join(format(x, '02x') for x in bytearray(send_data))
-                print('send', str(res))
+                #res = ' '.join(format(x, '02x') for x in bytearray(send_data))
+                #print('send', str(res))
                 #print('sent=',sent,'size=',sz)
                 if sent != sz:
                     print('send length error')
