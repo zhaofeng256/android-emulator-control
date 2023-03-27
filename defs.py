@@ -79,3 +79,7 @@ class ButtonType():
 class WheelEvent():
     ROLL_BACK = 0
     ROLL_FORWARD = 1
+
+class ControlEvent():
+    GAME_MODE = 0
+    DRIVE_MODE = 1

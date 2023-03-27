@@ -191,7 +191,7 @@ def test6():
     coyote = [[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]]
 
     # name = 'choper.png'
-    # circles = detect_circles(name)
+    # circles = detect_circles_of_file(name)
     circles = detect_circles_by_capture()
     if circles is not None:
         M = [choper, moto, coyote]
