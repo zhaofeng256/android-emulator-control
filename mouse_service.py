@@ -17,7 +17,7 @@ def mouse_event_callback(evt):
         data.type = EventType.TYPE_MOUSE
         set_param1(data, evt.x)
         set_param2(data, evt.y)
-        #print('move', evt.x, evt.y, time.time())
+        print('move', evt.x, evt.y, time.time())
     elif t == mouse._mouse_event.ButtonEvent:
         data.type = EventType.TYPE_BUTTON
         if evt.button == 'left':

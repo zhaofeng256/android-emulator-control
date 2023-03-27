@@ -60,6 +60,7 @@ class EventType():
     TYPE_MOUSE = 0x1
     TYPE_BUTTON = 0x2
     TYPE_WHEEL = 0x3
+    TYPE_CONTROL = 0x4
 
 
 class KeyEvent():
