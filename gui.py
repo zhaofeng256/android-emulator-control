@@ -1,6 +1,9 @@
+import ctypes
 import subprocess
 import sys
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import Qt, QPoint, QSize
+from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QLabel, QPushButton, QComboBox, QHBoxLayout
 import subprocess
 import re
@@ -11,6 +14,8 @@ import defs
 from keyborad_service import KeyboardService
 from mouse_service import MouseService
 from tcp_service import TcpServerService
+from window_info import window_info_init, is_admin, WindowInfo, info
+
 
 class WinForm(QWidget):
     def __init__(self):
@@ -193,17 +198,42 @@ class WinForm(QWidget):
     def bt_stop_send_clicked(self):
         TcpServerService.stop_send = 1 - TcpServerService.stop_send
 
+
+class TransparentWindow(QWidget):
+    def paintEvent(self, event=None):
+        painter = QPainter(self)
+        painter.setOpacity(0.5)
+        painter.setBrush(Qt.white)
+        painter.setPen(QPen(Qt.white))
+        painter.drawRect(self.rect())
+
+
 def main():
 
-    TcpServerService('', defs.TCP_PORT).start()
-    MouseService.start()
-    KeyboardService.start()
+    if is_admin():
+        window_info_init()
+        TcpServerService('', defs.TCP_PORT).start()
+        MouseService.start()
+        KeyboardService.start()
 
-    app = QtWidgets.QApplication(sys.argv)
-    wf = WinForm()
-    wf.bt_refresh_clicked()
-    wf.show()
-    sys.exit(app.exec_())
+        app = QtWidgets.QApplication(sys.argv)
+        wf = WinForm()
+        wf.bt_refresh_clicked()
+        wf.show()
+
+        qw = TransparentWindow()
+        qw.setWindowFlags(Qt.FramelessWindowHint)
+        qw.setAttribute(Qt.WA_NoSystemBackground, True)
+        qw.setAttribute(Qt.WA_TranslucentBackground, True)
+        qw.move(info.window_pos[0], info.window_pos[1])
+        qw.setFixedSize(info.window_size[0], info.window_size[1])
+        qw.show()
+        print(info.window_pos[0], info.window_size[0])
+
+        sys.exit(app.exec_())
+
+    else:
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
 
 
 if __name__ == "__main__":

@@ -57,9 +57,9 @@ def calc_chksum(data, length):
 
 class EventType():
     TYPE_KEYBOARD = 0x0
-    TYPE_MOUSE = 0x1
-    TYPE_BUTTON = 0x2
-    TYPE_WHEEL = 0x3
+    TYPE_MOUSE_AXIS = 0x1
+    TYPE_MOUSE_BUTTON = 0x2
+    TYPE_MOUSE_WHEEL = 0x3
     TYPE_CONTROL = 0x4
 
 
@@ -81,5 +81,24 @@ class WheelEvent():
     ROLL_FORWARD = 1
 
 class ControlEvent():
-    GAME_MODE = 0
-    DRIVE_MODE = 1
+    MAIN_MODE = 0
+    SUB_MODE = 1
+    MAP_MODE = 2
+    TRANSPARENT_MODE = 3
+
+class MainModeType():
+    MULTI_PLAYER = 0;
+    BATTLE_GROUND = 1;
+    PVE = 2;
+class SubModeType():
+    NONE_SUB_MODE = 0
+    SUB_MODE_OFFSET = 1
+    DRIVE_MOTO = 1
+    DRIVE_CHOPPER = 2
+    DRIVE_COYOTE = 3
+class MapModeStatus ():
+    MAP_MODE_OFF = 0
+    MAP_MODE_ON = 1
+class TransPointStatus():
+    TRANSPARENT_OFF = 0
+    TRANSPARENT_ON = 1

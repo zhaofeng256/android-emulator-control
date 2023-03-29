@@ -6,16 +6,18 @@ from ctypes import sizeof
 import binascii
 tcp_data_list = []
 tcp_list_cv = threading.Condition()
-
+client_connected = False
 from defs import *
 
 
 def tcp_data_append(data):
     with tcp_list_cv:
-        TcpServerService.tcp_data_id += 1
-        set_id(data, TcpServerService.tcp_data_id)
-        set_chksum(data)
-        tcp_data_list.append(data)
+        if client_connected:
+            TcpServerService.tcp_data_id += 1
+            set_id(data, TcpServerService.tcp_data_id)
+            set_chksum(data)
+            tcp_data_list.append(data)
+
         tcp_list_cv.notify_all()
 
 
@@ -49,12 +51,13 @@ class TcpServerService(object):
             return 1
 
     def thread_listen(self):
+        global client_connected
         while True:
             self.sock.listen(5)
             client, addr = self.sock.accept()
             print('accepted: %s' % (addr,))
             client.settimeout(60)
-
+            client_connected = True
             snd = threading.Thread(target=self.thread_send, args=(client, addr))
             snd.daemon = True
             snd.start()
@@ -88,4 +91,6 @@ class TcpServerService(object):
             except Exception as e:
                 print(e)
                 client.close()
+                global client_connected
+                client_connected = False
                 return False

@@ -55,16 +55,32 @@ def detect_circles_of_file(name):
 
     return circles
 
+def detect_boate():
+    image = cv2.imread("boat.png")
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
+                               param1=60, param2=40, minRadius=33, maxRadius=37)
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        print(circles)
 
-def detect_drive_mode():
-    choper = [[118, 86, 42]]
+    return circles
+def detect_sub_mode():
+    chopper = [[118, 86, 42]]
     moto = [[79, 190, 40], [79, 59, 41], [201, 55, 41]]
     coyote = [[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]]
-    M = [choper, moto, coyote]
+    M = [chopper, moto, coyote]
+    boat = [338, 299, 35]
 
     circles = detect_circles_by_capture()
     i = -1
     if circles is not None:
         i = get_match_item(circles, M)
         print('is', i)
+    else:
+        circles = detect_boate()
+        if len(circles) == 1 and similar_point(circles[0], boat):
+            i = 0
+            print('boat')
     return i

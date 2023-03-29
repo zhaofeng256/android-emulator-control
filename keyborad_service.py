@@ -3,9 +3,12 @@ import threading
 import keyboard
 
 import tcp_service
-from dectect_mode import detect_drive_mode
-from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, ControlEvent
+from dectect_mode import detect_sub_mode
+from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, ControlEvent, SubModeType, MapModeStatus, \
+    MainModeType, TransPointStatus
+from window_info import window_info_init
 
+current_sub_mode = SubModeType.NONE_SUB_MODE
 
 def key_event_callback(evt):
     data = TcpData()
@@ -19,35 +22,84 @@ def key_event_callback(evt):
     tcp_service.tcp_data_append(data)
     print(evt.name, evt.scan_code, evt.event_type)
 
+class ModeInfo():
+    def __init__(self):
+        self.main_mode = MainModeType.MULTI_PLAYER
+        self.sub_mode = SubModeType.NONE_SUB_MODE
+        self.map_mode_on = False
+        self.transparent_mode_on = False
 
-def mode_switch(mode):
+mode_info = ModeInfo()
+
+def main_mode_switch(mode):
+    mode_info.main_mode = mode
     print("switch to mode", mode)
     data = TcpData()
     data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.GAME_MODE)
+    set_param1(data, ControlEvent.MAIN_MODE)
     set_param2(data, int(mode))
     tcp_service.tcp_data_append(data)
 
 
-def drive_mode_switch():
-    i = detect_drive_mode()
-    if i >= 0:
-        print("switch to drive mode", i)
+def sub_mode_switch():
+
+    if mode_info.sub_mode == SubModeType.NONE_SUB_MODE:
+        i = detect_sub_mode()
+        if i >= 0:
+            mode_info.sub_mode = i + SubModeType.SUB_MODE_OFFSET
+            print("switch to sub mode", i)
+            data = TcpData()
+            data.type = EventType.TYPE_CONTROL
+            set_param1(data, ControlEvent.SUB_MODE)
+            set_param2(data, i + mode_info.sub_mode)
+            tcp_service.tcp_data_append(data)
+        else:
+            print("no sub mode detected")
+    else:
+        mode_info.sub_mode = SubModeType.NONE_SUB_MODE
         data = TcpData()
         data.type = EventType.TYPE_CONTROL
-        set_param1(data, ControlEvent.DRIVE_MODE)
-        set_param2(data, i)
+        set_param1(data, ControlEvent.SUB_MODE)
+        set_param2(data, SubModeType.NONE_SUB_MODE)
         tcp_service.tcp_data_append(data)
+
+
+def map_mode_switch():
+
+    mode_info.map_mode_on = not mode_info.map_mode_on
+    print("map mode on is", mode_info.map_mode_on)
+    data = TcpData()
+    data.type = EventType.TYPE_CONTROL
+    set_param1(data, ControlEvent.MAP_MODE)
+    if mode_info.map_mode_on:
+        set_param2(data, MapModeStatus.MAP_MODE_ON)
     else:
-        print("no vehicle detected")
+        set_param2(data, MapModeStatus.MAP_MODE_OFF)
+    tcp_service.tcp_data_append(data)
+
+
+def trans_point_mode_switch():
+    window_info_init()
+    mode_info.transparent_mode_on = not mode_info.transparent_mode_on
+    print('transparent point mode on is', mode_info.transparent_mode_on)
+    data = TcpData()
+    data.type = EventType.TYPE_CONTROL
+    set_param1(data, ControlEvent.TRANSPARENT_MODE)
+    if mode_info.transparent_mode_on:
+        set_param2(data, TransPointStatus.TRANSPARENT_ON)
+    else:
+        set_param2(data, TransPointStatus.TRANSPARENT_OFF)
+    tcp_service.tcp_data_append(data)
 
 
 def thread_key():
     keyboard.hook(key_event_callback)
-    keyboard.add_hotkey('ctrl+f1', mode_switch, args=('0'))
-    keyboard.add_hotkey('ctrl+f2', mode_switch, args=('1'))
-    keyboard.add_hotkey('ctrl+f3', mode_switch, args=('2'))
-    keyboard.add_hotkey('f', drive_mode_switch)
+    keyboard.add_hotkey('alt+f1', main_mode_switch, args=(str(MainModeType.MULTI_PLAYER)))
+    keyboard.add_hotkey('alt+f2', main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
+    keyboard.add_hotkey('alt+f3', main_mode_switch, args=(str(MainModeType.PVE)))
+    keyboard.add_hotkey('f', sub_mode_switch)
+    keyboard.add_hotkey('m', map_mode_switch)
+    keyboard.add_hotkey('ctrl', trans_point_mode_switch)
     keyboard.wait()
 
 
