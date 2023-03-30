@@ -29,7 +29,8 @@ def mouse_event_callback(evt):
             x, y = info.get_relative_position(MouseService.mouse_axis_x, MouseService.mouse_axis_y)
         else:
             x, y = evt.x, evt.y
-        print('move', x, y, evt.time)
+        MouseService.statusbar.showMessage(str(x) + ',' + str(y))
+        # print('move', x, y, evt.time)
         set_param1(data, x)
         set_param2(data, y)
 
@@ -83,3 +84,7 @@ class MouseService:
         k_thread = threading.Thread(target=thread_mouse, args=())
         k_thread.daemon = True
         k_thread.start()
+
+    def set_statusbar(s):
+        if not hasattr(MouseService, 'statusbar'):
+            MouseService.statusbar = s

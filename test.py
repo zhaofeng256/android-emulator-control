@@ -63,4 +63,18 @@ def test2():
         select_props(i)
     for i in range(3):
         select_armor(i)
-test2()
+class BBB():
+    b = 0
+    def test(self):
+        print('test')
+
+class AAA():
+    def __init__(self):
+        if not hasattr(AAA, 'main'):
+            AAA.main = BBB()
+
+
+#test2()
+a = AAA()
+#print(AAA.main.b)
+AAA.main.test()

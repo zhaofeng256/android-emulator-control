@@ -18,11 +18,14 @@ from tcp_service import TcpServerService
 from window_info import window_info_init, is_admin, WindowInfo, info
 
 class MainWindow(QMainWindow):
+
     def __init__(self):
         super(MainWindow, self).__init__(parent=None)
         self.statusBar = QStatusBar()
+        if not hasattr(MainWindow, 'sss'):
+            MainWindow.sss = self.statusBar
         self.setStatusBar(self.statusBar)
-        self.setWindowTitle("android emuulator control")
+        self.setWindowTitle("android emulator control")
         self.move(
             QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30,60)
         )
@@ -30,6 +33,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):
         self.centralWidget().transparent_window.close()
         event.accept()
+
 
 class WinForm(QWidget):
     def __init__(self):
@@ -43,10 +47,10 @@ class WinForm(QWidget):
         self.show_transparent_window = True
 
         self.cell_width = 100
-        self.cell_hight = 40
+        self.cell_high = 40
 
         self.combobox_devices = QComboBox()
-        self.combobox_devices.setFixedSize(2 * self.cell_width + 5, self.cell_hight)
+        self.combobox_devices.setFixedSize(2 * self.cell_width + 5, self.cell_high)
         # combo text align center
         self.combobox_devices.setEditable(True)
         self.combobox_devices.lineEdit().setAlignment(QtCore.Qt.AlignCenter)
@@ -54,61 +58,61 @@ class WinForm(QWidget):
         layout.addWidget(self.combobox_devices, 0, 0, 1, 2, QtCore.Qt.AlignLeft)
 
         self.bt_refresh = QPushButton("refresh", self)
-        self.bt_refresh.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_refresh.setFixedSize(self.cell_width, self.cell_high)
         self.bt_refresh.clicked.connect(self.bt_refresh_clicked)
         layout.addWidget(self.bt_refresh, 0, 2, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_run = QPushButton("run", self)
-        self.bt_run.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_run.setFixedSize(self.cell_width, self.cell_high)
         self.bt_run.clicked.connect(self.bt_run_clicked)
         layout.addWidget(self.bt_run, 1, 0, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_stop_run = QPushButton("stop_run", self)
-        self.bt_stop_run.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_stop_run.setFixedSize(self.cell_width, self.cell_high)
         self.bt_stop_run.clicked.connect(self.bt_stop_run_clicked)
         layout.addWidget(self.bt_stop_run, 1, 1, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_update_run = QPushButton("push_file", self)
-        self.bt_update_run.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_update_run.setFixedSize(self.cell_width, self.cell_high)
         self.bt_update_run.clicked.connect(self.bt_update_run_clicked)
         layout.addWidget(self.bt_update_run, 1, 2, 1, 1, QtCore.Qt.AlignCenter)
         self.bt_update_run.setDisabled(True)
 
         self.bt_cross_hair = QPushButton("cross_hair", self)
-        self.bt_cross_hair.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_cross_hair.setFixedSize(self.cell_width, self.cell_high)
         self.bt_cross_hair.clicked.connect(self.bt_cross_hair_clicked)
         layout.addWidget(self.bt_cross_hair, 2, 0, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_point_position = QPushButton("point_position", self)
-        self.bt_point_position.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_point_position.setFixedSize(self.cell_width, self.cell_high)
         self.bt_point_position.clicked.connect(self.bt_point_position_clicked)
         layout.addWidget(self.bt_point_position, 2, 1, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_not_point = QPushButton("not_point", self)
-        self.bt_not_point.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_not_point.setFixedSize(self.cell_width, self.cell_high)
         self.bt_not_point.clicked.connect(self.bt_not_point_clicked)
         layout.addWidget(self.bt_not_point, 2, 2, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_stop_move = QPushButton("stop_move", self)
-        self.bt_stop_move.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_stop_move.setFixedSize(self.cell_width, self.cell_high)
         self.bt_stop_move.clicked.connect(self.bt_stop_move_clicked)
         layout.addWidget(self.bt_stop_move, 3, 0, 1, 1, QtCore.Qt.AlignCenter)
 
 
         self.bt_start_coyote = QPushButton("coyote", self)
-        self.bt_start_coyote.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_start_coyote.setFixedSize(self.cell_width, self.cell_high)
         self.bt_start_coyote.clicked.connect(self.bt_start_coyote_clicked)
         layout.addWidget(self.bt_start_coyote, 3, 1, 1, 1, QtCore.Qt.AlignCenter)
 
         self.bt_stop_send = QPushButton("stop_send", self)
-        self.bt_stop_send.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_stop_send.setFixedSize(self.cell_width, self.cell_high)
         self.bt_stop_send.clicked.connect(self.bt_stop_send_clicked)
         layout.addWidget(self.bt_stop_send, 3, 2, 1, 1, QtCore.Qt.AlignCenter)
 
-        self.bt_trasparent_board = QPushButton("transparent", self)
-        self.bt_trasparent_board.setFixedSize(self.cell_width, self.cell_hight)
-        self.bt_trasparent_board.clicked.connect(self.bt_trasparent_board_clicked)
-        layout.addWidget(self.bt_trasparent_board, 4, 0, 1, 1, QtCore.Qt.AlignCenter)
+        self.bt_transparent_board = QPushButton("transparent", self)
+        self.bt_transparent_board.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_transparent_board.clicked.connect(self.bt_transparent_board_clicked)
+        layout.addWidget(self.bt_transparent_board, 4, 0, 1, 1, QtCore.Qt.AlignCenter)
 
         self.running = False
         self.bt_stop_run.setDisabled(True)
@@ -215,7 +219,7 @@ class WinForm(QWidget):
     def bt_stop_send_clicked(self):
         TcpServerService.stop_send = 1 - TcpServerService.stop_send
 
-    def bt_trasparent_board_clicked(self):
+    def bt_transparent_board_clicked(self):
         self.show_transparent_window = not self.show_transparent_window
         if self.show_transparent_window:
             self.transparent_window.show()
@@ -227,7 +231,9 @@ class TransparentWindow(QWidget):
         painter = QPainter(self)
         painter.setOpacity(0.5)
         painter.setBrush(Qt.white)
-        painter.setPen(QPen(Qt.white))
+        pen = QPen(Qt.red)
+        pen.setWidth(5)
+        painter.setPen(pen)
         rect = self.rect() - QMargins(5, 5, 5, 5)
         painter.drawRect(rect)
 
@@ -240,12 +246,8 @@ def find_main_window():
             return widget
     return None
 
-def set_status_bar_txt(t):
-    mw = find_main_window()
-    mw.statusBar.showMessage(t)
 
 def main():
-
     if is_admin():
         window_info_init()
         TcpServerService('', defs.TCP_PORT).start()
@@ -256,25 +258,22 @@ def main():
         wf.bt_refresh_clicked()
 
         wf.transparent_window = TransparentWindow()
-        #wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
+        wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
         wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
         wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
-        wf.transparent_window.move(info.window_pos[0], info.window_pos[1])
-        wf.transparent_window.setFixedSize(info.window_size[0], info.window_size[1])
-        wf.transparent_window.show()
+
+        info.window_pos = [125, 94]
+        info.window_size = [1032, 580]
         print(info.window_pos, info.window_size)
-        #wf.show()
+        wf.transparent_window.move(info.window_pos[0]-5, info.window_pos[1]-5)
+        wf.transparent_window.setFixedSize(info.window_size[0]+10, info.window_size[1]+10)
+        wf.transparent_window.show()
 
         mw = MainWindow()
         mw.setCentralWidget(wf)
         mw.show()
-
-        mw.statusBar.showMessage("pos:" + str(info.window_pos))
+        MouseService.set_statusbar(MainWindow.sss)
         #wf.setStatusTip("pos:" + str(info.window_pos))
-
-        set_status_bar_txt('hello')
-
-
 
         sys.exit(app.exec_())
 
