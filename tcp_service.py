@@ -12,12 +12,12 @@ from defs import *
 
 def tcp_data_append(data):
     with tcp_list_cv:
-        if client_connected:
-            TcpServerService.tcp_data_id += 1
-            set_id(data, TcpServerService.tcp_data_id)
-            set_chksum(data)
-            tcp_data_list.append(data)
-
+        TcpServerService.tcp_data_id += 1
+        set_id(data, TcpServerService.tcp_data_id)
+        set_chksum(data)
+        if len(tcp_data_list) > 100:
+            tcp_data_list.clear()
+        tcp_data_list.append(data)
         tcp_list_cv.notify_all()
 
 
@@ -58,6 +58,7 @@ class TcpServerService(object):
             print('accepted: %s' % (addr,))
             client.settimeout(60)
             client_connected = True
+            tcp_data_list.clear()
             snd = threading.Thread(target=self.thread_send, args=(client, addr))
             snd.daemon = True
             snd.start()

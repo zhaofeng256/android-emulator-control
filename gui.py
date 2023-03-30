@@ -2,9 +2,10 @@ import ctypes
 import subprocess
 import sys
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QPoint, QSize
+from PyQt5.QtCore import Qt, QPoint, QSize, QRect, QMargins
 from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QLabel, QPushButton, QComboBox, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QLabel, QPushButton, QComboBox, QHBoxLayout, QStatusBar, \
+    QMainWindow
 import subprocess
 import re
 import threading
@@ -16,22 +17,30 @@ from mouse_service import MouseService
 from tcp_service import TcpServerService
 from window_info import window_info_init, is_admin, WindowInfo, info
 
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super(MainWindow, self).__init__(parent=None)
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+        self.setWindowTitle("android emuulator control")
+        self.move(
+            QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30,60)
+        )
+
+    def closeEvent(self, event):
+        self.centralWidget().transparent_window.close()
+        event.accept()
 
 class WinForm(QWidget):
     def __init__(self):
         super(WinForm, self).__init__(parent=None)
-
-        self.setWindowTitle("android emuulator control")
-        self.move(
-            QApplication.desktop().screen().rect().center() - self.rect().center()
-        )
 
         layout = QGridLayout()
         layout.setColumnStretch(3, 4)
         self.setLayout(layout)
 
         self.transparent_window = 0
-        self.show_transparent_window = False
+        self.show_transparent_window = True
 
         self.cell_width = 100
         self.cell_hight = 40
@@ -99,7 +108,7 @@ class WinForm(QWidget):
         self.bt_trasparent_board = QPushButton("transparent", self)
         self.bt_trasparent_board.setFixedSize(self.cell_width, self.cell_hight)
         self.bt_trasparent_board.clicked.connect(self.bt_trasparent_board_clicked)
-        layout.addWidget(self.bt_trasparent_board, 4, 1, 1, 1, QtCore.Qt.AlignCenter)
+        layout.addWidget(self.bt_trasparent_board, 4, 0, 1, 1, QtCore.Qt.AlignCenter)
 
         self.running = False
         self.bt_stop_run.setDisabled(True)
@@ -219,8 +228,21 @@ class TransparentWindow(QWidget):
         painter.setOpacity(0.5)
         painter.setBrush(Qt.white)
         painter.setPen(QPen(Qt.white))
-        painter.drawRect(self.rect())
+        rect = self.rect() - QMargins(5, 5, 5, 5)
+        painter.drawRect(rect)
 
+
+def find_main_window():
+    # Global function to find the (open) QMainWindow in application
+    app = QApplication.instance()
+    for widget in app.topLevelWidgets():
+        if isinstance(widget, QMainWindow):
+            return widget
+    return None
+
+def set_status_bar_txt(t):
+    mw = find_main_window()
+    mw.statusBar.showMessage(t)
 
 def main():
 
@@ -229,20 +251,30 @@ def main():
         TcpServerService('', defs.TCP_PORT).start()
         MouseService.start()
         KeyboardService.start()
-
         app = QtWidgets.QApplication(sys.argv)
         wf = WinForm()
         wf.bt_refresh_clicked()
-        wf.show()
 
         wf.transparent_window = TransparentWindow()
-        wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
+        #wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
         wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
         wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
         wf.transparent_window.move(info.window_pos[0], info.window_pos[1])
         wf.transparent_window.setFixedSize(info.window_size[0], info.window_size[1])
         wf.transparent_window.show()
         print(info.window_pos, info.window_size)
+        #wf.show()
+
+        mw = MainWindow()
+        mw.setCentralWidget(wf)
+        mw.show()
+
+        mw.statusBar.showMessage("pos:" + str(info.window_pos))
+        #wf.setStatusTip("pos:" + str(info.window_pos))
+
+        set_status_bar_txt('hello')
+
+
 
         sys.exit(app.exec_())
 

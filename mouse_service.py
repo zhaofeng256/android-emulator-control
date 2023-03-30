@@ -9,28 +9,24 @@ from defs import EventType, TcpData, set_param1, set_param2, ButtonType, KeyEven
 from keyborad_service import mode_info
 from window_info import WindowInfo, info
 
-mouse_axis_x = 0
-mouse_axis_y = 0
-mouse_timeout = 0
 
 def mouse_event_callback(evt):
     t = type(evt)
     data = TcpData()
 
     if t == mouse._mouse_event.MoveEvent:
-        global mouse_axis_x, mouse_axis_y, mouse_timeout
-        #unuse frequent move because event report per 8ms while emulator move takes 17ms
-        if evt.time < mouse_timeout:
+        # unuse frequent move because event report per 8ms while emulator move takes 17ms
+        if evt.time < MouseService.mouse_timeout:
             return
-        mouse_axis_x = evt.x
-        mouse_axis_y = evt.y
-        mouse_timeout = evt.time + 0.01
+        MouseService.mouse_axis_x = evt.x
+        MouseService.mouse_axis_y = evt.y
+        MouseService.mouse_timeout = evt.time + 0.01
         if MouseService.stop_move:
             return
         data.type = EventType.TYPE_MOUSE_AXIS
         if mode_info.map_mode_on == MapModeStatus.MAP_MODE_ON or \
                 mode_info.transparent_mode_on == TransPointStatus.TRANSPARENT_ON:
-            x, y = info.get_relative_position(mouse_axis_x, mouse_axis_y)
+            x, y = info.get_relative_position(MouseService.mouse_axis_x, MouseService.mouse_axis_y)
         else:
             x, y = evt.x, evt.y
         print('move', x, y, evt.time)
@@ -78,6 +74,9 @@ def thread_mouse():
 
 class MouseService:
     stop_move = True
+    mouse_axis_x = 0
+    mouse_axis_y = 0
+    mouse_timeout = 0
 
     @staticmethod
     def start():
