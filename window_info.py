@@ -26,7 +26,7 @@ class WindowInfo():
     def __init__(self):
         self.emulator_resolution = [0, 0]
         self.window_hwnd = [-1, -1]
-        self.window_size = [0, 0]
+        self.window_size = [1280, 720]
         self.window_pos = [0, 0]
         self.window_title = ''
 

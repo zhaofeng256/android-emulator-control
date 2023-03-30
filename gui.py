@@ -30,6 +30,9 @@ class WinForm(QWidget):
         layout.setColumnStretch(3, 4)
         self.setLayout(layout)
 
+        self.transparent_window = 0
+        self.show_transparent_window = False
+
         self.cell_width = 100
         self.cell_hight = 40
 
@@ -92,6 +95,11 @@ class WinForm(QWidget):
         self.bt_stop_send.setFixedSize(self.cell_width, self.cell_hight)
         self.bt_stop_send.clicked.connect(self.bt_stop_send_clicked)
         layout.addWidget(self.bt_stop_send, 3, 2, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_trasparent_board = QPushButton("transparent", self)
+        self.bt_trasparent_board.setFixedSize(self.cell_width, self.cell_hight)
+        self.bt_trasparent_board.clicked.connect(self.bt_trasparent_board_clicked)
+        layout.addWidget(self.bt_trasparent_board, 4, 1, 1, 1, QtCore.Qt.AlignCenter)
 
         self.running = False
         self.bt_stop_run.setDisabled(True)
@@ -198,6 +206,12 @@ class WinForm(QWidget):
     def bt_stop_send_clicked(self):
         TcpServerService.stop_send = 1 - TcpServerService.stop_send
 
+    def bt_trasparent_board_clicked(self):
+        self.show_transparent_window = not self.show_transparent_window
+        if self.show_transparent_window:
+            self.transparent_window.show()
+        else:
+            self.transparent_window.hide()
 
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
@@ -221,14 +235,14 @@ def main():
         wf.bt_refresh_clicked()
         wf.show()
 
-        qw = TransparentWindow()
-        qw.setWindowFlags(Qt.FramelessWindowHint)
-        qw.setAttribute(Qt.WA_NoSystemBackground, True)
-        qw.setAttribute(Qt.WA_TranslucentBackground, True)
-        qw.move(info.window_pos[0], info.window_pos[1])
-        qw.setFixedSize(info.window_size[0], info.window_size[1])
-        qw.show()
-        print(info.window_pos[0], info.window_size[0])
+        wf.transparent_window = TransparentWindow()
+        wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
+        wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
+        wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
+        wf.transparent_window.move(info.window_pos[0], info.window_pos[1])
+        wf.transparent_window.setFixedSize(info.window_size[0], info.window_size[1])
+        wf.transparent_window.show()
+        print(info.window_pos, info.window_size)
 
         sys.exit(app.exec_())
 

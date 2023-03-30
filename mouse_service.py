@@ -11,26 +11,29 @@ from window_info import WindowInfo, info
 
 mouse_axis_x = 0
 mouse_axis_y = 0
-
+mouse_timeout = 0
 
 def mouse_event_callback(evt):
     t = type(evt)
     data = TcpData()
 
     if t == mouse._mouse_event.MoveEvent:
-        global mouse_axis_x, mouse_axis_y
+        global mouse_axis_x, mouse_axis_y, mouse_timeout
+        #unuse frequent move because event report per 8ms while emulator move takes 17ms
+        if evt.time < mouse_timeout:
+            return
         mouse_axis_x = evt.x
         mouse_axis_y = evt.y
+        mouse_timeout = evt.time + 0.01
         if MouseService.stop_move:
             return
         data.type = EventType.TYPE_MOUSE_AXIS
         if mode_info.map_mode_on == MapModeStatus.MAP_MODE_ON or \
                 mode_info.transparent_mode_on == TransPointStatus.TRANSPARENT_ON:
             x, y = info.get_relative_position(mouse_axis_x, mouse_axis_y)
-            print('trans', x, y, time.time())
         else:
             x, y = evt.x, evt.y
-            print('move', x, y, time.time())
+        print('move', x, y, evt.time)
         set_param1(data, x)
         set_param2(data, y)
 
