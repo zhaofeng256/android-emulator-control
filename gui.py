@@ -229,7 +229,7 @@ class WinForm(QWidget):
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
         painter = QPainter(self)
-        painter.setOpacity(0.5)
+        painter.setOpacity(0.1)
         painter.setBrush(Qt.white)
         pen = QPen(Qt.red)
         pen.setWidth(5)
@@ -255,15 +255,15 @@ def main():
         KeyboardService.start()
         app = QtWidgets.QApplication(sys.argv)
         wf = WinForm()
-        wf.bt_refresh_clicked()
+        #wf.bt_refresh_clicked()
 
         wf.transparent_window = TransparentWindow()
         wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
         wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
         wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
 
-        info.window_pos = [125, 94]
-        info.window_size = [1032, 580]
+        # info.window_pos = [125, 94]
+        # info.window_size = [1032, 580]
         print(info.window_pos, info.window_size)
         wf.transparent_window.move(info.window_pos[0]-5, info.window_pos[1]-5)
         wf.transparent_window.setFixedSize(info.window_size[0]+10, info.window_size[1]+10)

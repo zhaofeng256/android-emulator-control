@@ -47,11 +47,11 @@ def sub_mode_switch():
         i = detect_sub_mode()
         if i >= 0:
             mode_info.sub_mode = i + SubModeType.SUB_MODE_OFFSET
-            print("switch to sub mode", i)
+            print("switch to sub mode", mode_info.sub_mode)
             data = TcpData()
             data.type = EventType.TYPE_CONTROL
             set_param1(data, ControlEvent.SUB_MODE)
-            set_param2(data, i + mode_info.sub_mode)
+            set_param2(data, mode_info.sub_mode)
             tcp_service.tcp_data_append(data)
         else:
             print("no sub mode detected")
@@ -97,9 +97,9 @@ def thread_key():
     keyboard.add_hotkey('alt+f1', main_mode_switch, args=(str(MainModeType.MULTI_PLAYER)))
     keyboard.add_hotkey('alt+f2', main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
     keyboard.add_hotkey('alt+f3', main_mode_switch, args=(str(MainModeType.PVE)))
-    keyboard.add_hotkey('f', sub_mode_switch)
-    keyboard.add_hotkey('m', map_mode_switch)
-    keyboard.add_hotkey('ctrl', trans_point_mode_switch)
+    keyboard.add_hotkey('l', sub_mode_switch)
+    keyboard.add_hotkey('c', map_mode_switch)
+    keyboard.add_hotkey('enter', trans_point_mode_switch)
     keyboard.wait()
 
 

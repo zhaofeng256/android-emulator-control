@@ -67,10 +67,10 @@ def detect_boate():
 
     return circles
 def detect_sub_mode():
-    chopper = [[118, 86, 42]]
     moto = [[79, 190, 40], [79, 59, 41], [201, 55, 41]]
+    chopper = [[118, 86, 42]]
     coyote = [[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]]
-    M = [chopper, moto, coyote]
+    M = [moto, chopper, coyote]
     boat = [338, 299, 35]
 
     circles = detect_circles_by_capture()
