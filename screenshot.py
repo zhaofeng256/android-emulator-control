@@ -172,6 +172,7 @@ def detect_circles_of_file(name):
 
     return circles
 
+
 def detect_circles_by_capture():
     image = pyautogui.screenshot(region=[870, 350, 1280 - 870, 720 - 350])
     image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
@@ -184,6 +185,7 @@ def detect_circles_by_capture():
         print(circles)
 
     return circles
+
 
 def detect_boate():
     image = cv2.imread("boat.png")
@@ -204,10 +206,9 @@ def test6():
     coyote = [[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]]
     boat = [338, 299, 35]
 
-
     name = 'boat.png'
     circles = detect_circles_of_file(name)
-    #circles = detect_circles_by_capture()
+    # circles = detect_circles_by_capture()
     if circles is not None:
         M = [chopper, moto, coyote]
         i = get_match_item(circles, M)
@@ -218,4 +219,113 @@ def test6():
             i = 0
             print('boat')
 
-test6()
+
+def test7():
+    img = cv2.imread('1/door.png')
+    # img = cv2.imread('1/selectcar.png')#120
+    # img = cv2.imread('1/pickup.png')
+    # img = cv2.imread('1/kongtou.png')
+    # img = cv2.imread('1/kongtougreen.png')
+    # img = cv2.imread('1/redbox.png')
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    ret, thresh = cv2.threshold(gray, 120, 255, 0)
+    cv2.imshow("thresh", thresh)
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+    print("Number of contours detected:", len(contours))
+
+    idx = 0
+    for cnt in contours:
+        x1, y1 = cnt[0][0]
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if w > 100:
+                idx += 1
+                cv2.putText(img, str(idx), (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
+                print(x, y, w, h)
+            # ratio = float(w)/h
+            # if ratio >= 0.9 and ratio <= 1.1:
+            #    img = cv2.drawContours(img, [cnt], -1, (0,255,255), 3)
+            #    cv2.putText(img, 'Square', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+            # else:
+            #    cv2.putText(img, 'Rectangle', (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+            #    img = cv2.drawContours(img, [cnt], -1, (0,255,0), 3)
+
+    cv2.imshow("Shapes", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def detect_door():
+    image = cv2.imread("1/door.png")
+    output = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
+                               param1=60, param2=40, minRadius=27, maxRadius=31)
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        print(circles)
+
+        # loop over the circles
+        for (x, y, r) in circles:
+            cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+    # show the output image
+    cv2.imshow("circle", output)
+    cv2.waitKey(0)
+    return circles
+
+
+def detect_drive():
+    image = cv2.imread("1/drive.png")
+    output = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
+                               param1=60, param2=40, minRadius=42, maxRadius=46)
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        print(circles)
+
+        # loop over the circles
+        for (x, y, r) in circles:
+            cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+    # show the output image
+    cv2.imshow("circle", output)
+    cv2.waitKey(0)
+    return circles
+
+
+def detect_tough_guy():
+    image = cv2.imread("1/man.png")
+    # image = cv2.imread("1/man_down.png")
+    output = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
+                               param1=60, param2=40, minRadius=38, maxRadius=42)
+    idx = 0
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        print(circles)
+
+        # loop over the circles
+        for (x, y, r) in circles:
+            idx += 1
+            cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+            cv2.putText(output, str(idx), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 4)
+    # show the output image
+    cv2.imshow("circle", output)
+    cv2.waitKey(0)
+    return circles
+
+
+detect_tough_guy()
+
+if __name__ == '__':
+    test7()
+    detect_door()
+    detect_drive()
+    detect_tough_guy()
