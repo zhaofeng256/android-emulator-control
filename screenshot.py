@@ -1,11 +1,14 @@
+import csv
 import time
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pyautogui
 import win32con
 import win32gui
 import win32ui
+from PIL import Image, ImageDraw
 
 
 def window_capture(x, y, w, h, filename):
@@ -279,22 +282,29 @@ def detect_door():
 
 
 def detect_drive():
-    image = cv2.imread("1/drive.png")
+    name = "1/drive.png"
+    image = cv2.imread(name)
     output = image.copy()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
                                param1=60, param2=40, minRadius=42, maxRadius=46)
+    idx = 0
     if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")
-        print(circles)
+        # circles = np.round(circles[0, :]).astype("int")
+        circles = (circles[0, :]).astype("float")
 
         # loop over the circles
         for (x, y, r) in circles:
-            cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+            idx += 1
+            cv2.circle(output, (round(x), round(y)), round(r), (0, 255, 0), 2)
+            cv2.putText(output, str(idx), (round(x), round(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 4)
+            print(idx, circles[idx - 1])
+
     # show the output image
     cv2.imshow("circle", output)
     cv2.waitKey(0)
+
     return circles
 
 
@@ -322,7 +332,193 @@ def detect_tough_guy():
     return circles
 
 
-detect_tough_guy()
+def sift_match():
+    # import required libraries
+    import cv2
+
+    # read two input images as grayscale
+    img1 = cv2.imread('2/drive_3.png', cv2.IMREAD_GRAYSCALE)
+    img2 = cv2.imread('1/drive.png', cv2.IMREAD_GRAYSCALE)
+
+    # Initiate SIFT detector
+    sift = cv2.SIFT_create()
+
+    # detect and compute the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
+
+    # create BFMatcher object
+    bf = cv2.BFMatcher()
+
+    # Match descriptors.
+    matches = bf.match(des1, des2)
+
+    # sort the matches based on distance
+    matches = sorted(matches, key=lambda val: val.distance)
+
+    # Draw first 50 matches.
+    # out = cv2.drawMatches(img1, kp1, img2, kp2, matches[:1], None, flags=2)
+    # plt.imshow(out), plt.show()
+
+    print(kp2[matches[0].trainIdx].pt)
+
+
+def sift_match_zone(src, name, x1, y1, x2, y2):
+    # import required libraries
+    import cv2
+
+    # read two input images as grayscale
+    img1 = cv2.imread('2/' + name + '.png', cv2.IMREAD_GRAYSCALE)
+    img2 = cv2.imread(src, cv2.IMREAD_GRAYSCALE)
+    crop = img2[y1:y2, x1:x2]
+    # print(x1, y1, x2, y2, img1.shape, crop.shape)
+    # cv2.imshow("crop", crop)
+    # cv2.waitKey(0)
+    # Initiate SIFT detector
+    sift = cv2.SIFT_create()
+
+    # detect and compute the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(crop, None)
+
+    # create BFMatcher object
+    bf = cv2.BFMatcher()
+
+    start = time.time()
+    # Match descriptors.
+    matches = bf.match(des1, des2)
+
+    # sort the matches based on distance
+    matches = sorted(matches, key=lambda val: val.distance)
+    print('time elipse:', time.time() - start)
+    # Draw first 50 matches.
+    out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:1], None, flags=2)
+    plt.imshow(out), plt.show()
+    if matches[0].distance < 10:
+        return True, x1 + kp2[matches[0].trainIdx].pt[0], y1 + kp2[matches[0].trainIdx].pt[1]
+    else:
+        return False, 0, 0
+    # for m in matches:
+    #     print(m.distance)
+
+
+def crop_circle():
+    # Open the input image as numpy array, convert to RGB
+    img = Image.open("1/drive.png")
+    img = img.crop((100, 100, 200, 200)).convert("RGB")
+    img.show()
+    npImage = np.array(img)
+    h, w = img.size
+
+    # Create same size alpha layer with circle
+    alpha = Image.new('L', img.size, 0)
+    draw = ImageDraw.Draw(alpha)
+    # draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+    draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+
+    # Convert alpha Image to numpy array
+    npAlpha = np.array(alpha)
+
+    # Add alpha layer to RGB
+    npImage = np.dstack((npImage, npAlpha))
+
+    # Save with alpha
+    Image.fromarray(npImage).save('1/result.png')
+
+
+def save_circle_panel(src, x, y, r, dst):
+    img = Image.open(src)
+    img = img.crop((x - r - 2, y - r - 2, x + r + 2, y + r + 2)).convert("RGB")
+    # img.show()
+    npImage = np.array(img)
+    h, w = img.size
+
+    # Create same size alpha layer with circle
+    alpha = Image.new('L', img.size, 0)
+    draw = ImageDraw.Draw(alpha)
+    # draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+    draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+
+    # Convert alpha Image to numpy array
+    npAlpha = np.array(alpha)
+
+    # Add alpha layer to RGB
+    npImage = np.dstack((npImage, npAlpha))
+
+    # Save with alpha
+    Image.fromarray(npImage).save(dst)
+
+
+def save_panel_axis(name, left, top, right, bottom):
+    dict = {}
+    dict['name'] = name
+    dict['left'] = left
+    dict['top'] = top
+    dict['right'] = right
+    dict['bottom'] = bottom
+    with open('pannels.csv', 'w', newline='\n') as f:  # You will need 'wb' mode in Python 2.x
+        w = csv.DictWriter(f, fieldnames=['name', 'left', 'top', 'right', 'bottom'])
+        w.writeheader()
+        w.writerow(dict)
+        f.close()
+
+
+def read_panel_axis():
+    with open('pannels.csv', 'r', newline='\n') as f:
+        reader = csv.DictReader(f)
+        # print(reader.line_num)
+        axis = [*reader]
+        # print(axis)
+        # for row in reader:
+        #     print(row.get('name'))
+        f.close()
+        return axis
+
+
+def detect_circle_panel(name, min, max):
+    image = cv2.imread(name)
+    output = image.copy()
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
+                               param1=60, param2=40, minRadius=min, maxRadius=max)
+    idx = 0
+    if circles is not None:
+        # circles = np.round(circles[0, :]).astype("int")
+        circles = (circles[0, :]).astype("float")
+
+        for (x, y, r) in circles:
+            idx += 1
+            cv2.circle(output, (round(x), round(y)), round(r), (0, 255, 0), 2)
+            cv2.putText(output, str(idx), (round(x), round(y)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 4)
+            print(idx, circles[idx - 1])
+
+    # show the output image
+    cv2.imshow("circle", output)
+    ret = cv2.waitKey(0)
+    ret = int(ret - 0x30)
+
+    return circles[ret - 1][0], circles[ret - 1][1], circles[ret - 1][2]
+
+
+def select_and_sift_match(file, name, shape, min_radius, max_radius):
+    x, y, r = detect_circle_panel(file, min_radius, max_radius)
+    xc, yc = x, y
+    save_circle_panel(file, x, y, r, '2/' + name + '.png')
+    save_panel_axis(name, x - r, y - r, x + r, y + r)
+
+    axis = read_panel_axis()
+
+    for d in axis:
+        if d['name'] == name:
+            found, x, y = sift_match_zone(file, name, round(float(d['left'])) - 2, round(float(d['top'])) - 2,
+                                          round(float(d['right'])) + 2, round(float(d['bottom'])) + 2)
+            if found:
+                print(name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
+
+
+#select_and_sift_match('1/drive.png', 'take_drive', 0, 42, 46)
+select_and_sift_match('1/drive.png', 'drive_by', 0, 42, 46)
 
 if __name__ == '__':
     test7()
