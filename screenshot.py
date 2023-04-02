@@ -1,5 +1,7 @@
 import csv
+import os
 import time
+from operator import itemgetter
 
 import cv2
 import matplotlib.pyplot as plt
@@ -9,6 +11,7 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image, ImageDraw
+from PIL import ImageGrab
 
 
 def window_capture(x, y, w, h, filename):
@@ -224,12 +227,12 @@ def test6():
 
 
 def test7():
-    img = cv2.imread('1/door.png')
+    # img = cv2.imread('1/door.png')
     # img = cv2.imread('1/selectcar.png')#120
     # img = cv2.imread('1/pickup.png')
     # img = cv2.imread('1/kongtou.png')
     # img = cv2.imread('1/kongtougreen.png')
-    # img = cv2.imread('1/redbox.png')
+    img = cv2.imread('1/redbox.png')
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     ret, thresh = cv2.threshold(gray, 120, 255, 0)
@@ -366,9 +369,11 @@ def sift_match():
 def sift_match_zone(src, name, x1, y1, x2, y2):
     # import required libraries
     import cv2
-
+    img1 = cv2.imread('4/' + name + '.png',cv2.IMREAD_UNCHANGED)
+    cv2.imshow('saved',img1)
+    cv2.waitKey(3)
     # read two input images as grayscale
-    img1 = cv2.imread('2/' + name + '.png', cv2.IMREAD_GRAYSCALE)
+    img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
     img2 = cv2.imread(src, cv2.IMREAD_GRAYSCALE)
     crop = img2[y1:y2, x1:x2]
     # print(x1, y1, x2, y2, img1.shape, crop.shape)
@@ -377,10 +382,13 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
     # Initiate SIFT detector
     sift = cv2.SIFT_create()
 
+    # ret, img1 = cv2.threshold(img1, 150, 255, 0)
+    # ret, crop = cv2.threshold(crop, 150, 255, 0)
+
     # detect and compute the keypoints and descriptors with SIFT
     kp1, des1 = sift.detectAndCompute(img1, None)
     kp2, des2 = sift.detectAndCompute(crop, None)
-
+    print('keypoints',len(kp1),len(kp2))
     # create BFMatcher object
     bf = cv2.BFMatcher()
 
@@ -390,16 +398,19 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
 
     # sort the matches based on distance
     matches = sorted(matches, key=lambda val: val.distance)
+
     print('time elipse:', time.time() - start)
     # Draw first 50 matches.
-    out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:1], None, flags=2)
+    out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:50], None, flags=2)
     plt.imshow(out), plt.show()
+
+    for i in range(10):
+        print(matches[i].distance, x1 + kp2[matches[i].trainIdx].pt[0], y1 + kp2[matches[i].trainIdx].pt[1])
+
     if matches[0].distance < 10:
         return True, x1 + kp2[matches[0].trainIdx].pt[0], y1 + kp2[matches[0].trainIdx].pt[1]
     else:
         return False, 0, 0
-    # for m in matches:
-    #     print(m.distance)
 
 
 def crop_circle():
@@ -414,7 +425,7 @@ def crop_circle():
     alpha = Image.new('L', img.size, 0)
     draw = ImageDraw.Draw(alpha)
     # draw.pieslice([0, 0, h, w], 0, 360, fill=255)
-    draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+    draw.pieslice(((0, 0), (h, w)), 0, 360, fill=255)
 
     # Convert alpha Image to numpy array
     npAlpha = np.array(alpha)
@@ -436,8 +447,7 @@ def save_circle_panel(src, x, y, r, dst):
     # Create same size alpha layer with circle
     alpha = Image.new('L', img.size, 0)
     draw = ImageDraw.Draw(alpha)
-    # draw.pieslice([0, 0, h, w], 0, 360, fill=255)
-    draw.pieslice([0, 0, h, w], 0, 360, fill=255)
+    draw.pieslice(((0, 0), (h, w)), 0, 360, fill=255)
 
     # Convert alpha Image to numpy array
     npAlpha = np.array(alpha)
@@ -448,23 +458,40 @@ def save_circle_panel(src, x, y, r, dst):
     # Save with alpha
     Image.fromarray(npImage).save(dst)
 
+    image = Image.open(dst)
+    image.convert("RGBA")
+    canvas = Image.new('RGBA', image.size, (255, 255, 255, 255))  # Empty canvas colour (r,g,b,a)
+    canvas.paste(image, mask=image)  # Paste the image onto the canvas, using it's alpha channel as mask
+    canvas.save(dst, format="PNG")
 
-def save_panel_axis(name, left, top, right, bottom):
-    dict = {}
-    dict['name'] = name
-    dict['left'] = left
-    dict['top'] = top
-    dict['right'] = right
-    dict['bottom'] = bottom
-    with open('pannels.csv', 'w', newline='\n') as f:  # You will need 'wb' mode in Python 2.x
-        w = csv.DictWriter(f, fieldnames=['name', 'left', 'top', 'right', 'bottom'])
+
+def save_panel_axis(id, name, left, top, right, bottom):
+    dct = {}
+    dct['id'] = id
+    dct['name'] = name
+    dct['left'] = left
+    dct['top'] = top
+    dct['right'] = right
+    dct['bottom'] = bottom
+    lst = read_panel_axis()
+    for i in range(len(lst)):
+        if lst[i]['name'] == name:
+            del lst[i]
+            break
+    lst.append(dct)
+    lst = sorted(lst, key=lambda d: int(d['id']))
+
+    with open('panels.csv', 'w', newline='\n') as f:  # You will need 'wb' mode in Python 2.x
+        w = csv.DictWriter(f, fieldnames=dct.keys())
         w.writeheader()
-        w.writerow(dict)
+
+        for i in lst:
+            w.writerow(i)
         f.close()
 
 
 def read_panel_axis():
-    with open('pannels.csv', 'r', newline='\n') as f:
+    with open('panels.csv', 'r', newline='\n') as f:
         reader = csv.DictReader(f)
         # print(reader.line_num)
         axis = [*reader]
@@ -472,16 +499,17 @@ def read_panel_axis():
         # for row in reader:
         #     print(row.get('name'))
         f.close()
+        axis = sorted(axis, key=lambda d: d['id'])
         return axis
 
 
-def detect_circle_panel(name, min, max):
-    image = cv2.imread(name)
+def detect_circle_panel(file_name, min_radius, max_radius, tag):
+    image = cv2.imread(file_name)
     output = image.copy()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
-                               param1=60, param2=40, minRadius=min, maxRadius=max)
+                               param1=60, param2=40, minRadius=min_radius, maxRadius=max_radius)
     idx = 0
     if circles is not None:
         # circles = np.round(circles[0, :]).astype("int")
@@ -494,18 +522,19 @@ def detect_circle_panel(name, min, max):
             print(idx, circles[idx - 1])
 
     # show the output image
-    cv2.imshow("circle", output)
+    cv2.imshow("select "+tag, output)
     ret = cv2.waitKey(0)
     ret = int(ret - 0x30)
-
+    cv2.destroyAllWindows()
     return circles[ret - 1][0], circles[ret - 1][1], circles[ret - 1][2]
 
 
-def select_and_sift_match(file, name, shape, min_radius, max_radius):
-    x, y, r = detect_circle_panel(file, min_radius, max_radius)
+def select_and_sift_match(id, name, min_radius, max_radius):
+    file = '3/'+name+'.png'
+    x, y, r = detect_circle_panel(file, min_radius, max_radius, name)
     xc, yc = x, y
-    save_circle_panel(file, x, y, r, '2/' + name + '.png')
-    save_panel_axis(name, x - r, y - r, x + r, y + r)
+    save_circle_panel(file, x, y, r, '4/' + name + '.png')
+    save_panel_axis(id, name, x - r, y - r, x + r, y + r)
 
     axis = read_panel_axis()
 
@@ -517,8 +546,165 @@ def select_and_sift_match(file, name, shape, min_radius, max_radius):
                 print(name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
 
-#select_and_sift_match('1/drive.png', 'take_drive', 0, 42, 46)
-select_and_sift_match('1/drive.png', 'drive_by', 0, 42, 46)
+def detect_suply_box():
+    # img = cv2.imread('1/selectcar.png')#120
+    # img = cv2.imread('1/pickup.png')
+    # img = cv2.imread('1/kongtou.png')
+    img = cv2.imread('1/kongtougreen.png')
+    # img = cv2.imread('1/redbox.png')
+    left = 396
+    right = 934
+    top = 308
+    bottom = 604
+    target_width = 230
+    target_high = 65
+
+    self_def_width = 265
+    self_def_high = 187
+
+    crop = img[top:bottom, left:right]
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+
+    ret, thresh = cv2.threshold(gray, 120, 255, 0)
+    # cv2.imshow("thresh", thresh)
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+    print("Number of contours detected:", len(contours))
+
+    lst = []
+    self_def = False
+    for cnt in contours:
+        x1, y1 = cnt[0][0]
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if abs(target_width - w) <= 2 and abs(target_high - h) <= 2:
+                crop = cv2.drawContours(crop, [cnt], -1, (0, 255, 0), 2)
+                lst.append((x, y, w, h))
+            elif abs(self_def_width - w) <= 2 and abs(self_def_high - h) <= 2:
+                crop = cv2.drawContours(crop, [cnt], -1, (0, 255, 0), 2)
+                self_def = True
+                print(x, y, w, h)
+
+    if self_def:
+        cv2.putText(img, str(1), (left + round(0.5 * self_def_width), top + 20), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 255), 2)
+        cv2.putText(img, str(2), (left + round(1.5 * self_def_width), top + 20), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 255), 2)
+        cv2.putText(img, str(3), (left + round(0.5 * self_def_width), bottom - 20), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 255), 2)
+        cv2.putText(img, str(4), (left + round(1.5 * self_def_width), bottom - 20), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                    (0, 0, 255), 2)
+        # confirm (740,636)
+    else:
+        lst = sorted(lst, key=itemgetter(0))
+        lst = sorted(lst, key=itemgetter(1))
+        for i in range(len(lst)):
+            cv2.putText(img, str(i + 1),
+                        (left + lst[i][0] + round(0.5 * target_width), top + lst[i][1] + round(0.5 * target_high)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        print(lst)
+
+    cv2.imshow("Shapes", img)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
+
+def detect_pickup():
+    img = cv2.imread('1/pickup.png')
+
+    left = 726
+    right = 996
+    top = 308
+    bottom = 604
+    target_width = 230
+    target_high = 65
+
+    crop = img[top:bottom, left:right]
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+
+    ret, thresh = cv2.threshold(gray, 120, 255, 0)
+    # cv2.imshow("thresh", thresh)
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+    print("Number of contours detected:", len(contours))
+
+    lst = []
+    self_def = False
+    for cnt in contours:
+        x1, y1 = cnt[0][0]
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if abs(target_width - w) <= 2 and abs(target_high - h) <= 2:
+                crop = cv2.drawContours(crop, [cnt], -1, (0, 255, 0), 2)
+                lst.append((x, y, w, h))
+
+        lst = sorted(lst, key=itemgetter(1))
+        for i in range(len(lst)):
+            cv2.putText(img, str(i + 1),
+                        (left + lst[i][0] + round(0.5 * target_width), top + lst[i][1] + round(0.5 * target_high)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+        print(lst)
+
+    cv2.imshow("Shapes", img)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
+
+def test_dict():
+    dict = {}
+    dict['txt'] = 1
+    dict['rect'] = (100,80,200,50)
+    lst = []
+
+    lst.append(dict)
+    lst.append(dict)
+    print(lst)
+
+def update_screen():
+
+    t0 = time.time()
+    while True:
+        screenshot = ImageGrab.grab()
+        screenshot = np.array(screenshot)
+        screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+        crop = screenshot[385:476, 891:983]
+        cv2.imshow("Computer Vision", crop)
+        key = cv2.waitKey(10)
+        if key == ord('q'):
+            break
+        ex_time = time.time() - t0
+        print("FPS: " + str(1 / (ex_time)))
+        t0 = time.time()
+
+def folder_resize():
+    lst = os.listdir('1')
+    for name in lst:
+        print(name)
+        resize_image(name)
+def resize_image(name):
+    image = cv2.imread('1/'+name)
+    resized = cv2.resize(image, (1280,720), interpolation=cv2.INTER_LINEAR)
+    cv2.imwrite('3/'+name,resized)
+
+
+def save_screenshot(name):
+    #show_full_screen('1/'+name)
+    img2 = pyautogui.screenshot(region=(0, 0, 1280, 720))
+    img2.save('3/'+name)
+
+#folder_resize()
+#resize_image('redbox.png')
+#update_screen()
+select_and_sift_match(0, 'take_drive',  40, 44)
+select_and_sift_match(1, 'drive_by',  40, 44)
+select_and_sift_match(2, 'door',  25, 29)
+select_and_sift_match(3, 'strop_on',  35, 39)
+select_and_sift_match(4, 'strop_off',  35, 39)
+# detect_suply_box()
+#detect_pickup()
+#test_dict()
+# sift_match_zone('1/redbox.png', 'suply', 392, 302, 430, 600)
+# sift_match_zone('1/redbox.png', 'suply', 392, 440, 430, 600)
 
 if __name__ == '__':
     test7()
