@@ -737,7 +737,10 @@ def mod_png():
    cv2.imshow('img', thresh)
    cv2.waitKey()
    cv2.destroyAllWindows()
-
+def cut_image():
+    img = cv2.imread('3/none.png')
+    crop = img[0:720, 0:1280]
+    cv2.imwrite('3/crop_none.png', crop)
 def find_homo():
     import numpy as np
     import cv2 as cv
@@ -781,8 +784,9 @@ def find_homo():
                        flags = 2)
     img3 = cv.drawMatches(img1,kp1,img2,kp2,good,None,**draw_params)
     plt.imshow(img3, 'gray'),plt.show()
-
+cut_image()
 #test4('3/boat.png')
+#test4('moto.png')
 #sift_match()
 #find_homo()
 
@@ -790,14 +794,16 @@ def find_homo():
 #folder_resize()
 #resize_image('redbox.png')
 #update_screen()
-select_and_sift_match(33, 0, 'take_drive',  40, 44)
-select_and_sift_match(33, 1, 'door',  25, 29)
-select_and_sift_match(33, 2, 'strop_on',  35, 39)
-select_and_sift_match(33, 3, 'strop_off',  35, 39)
-select_and_sift_match(33, 4, 'tough_on',  35, 39)
-select_and_sift_match(33, 5, 'print_vehicle',  20, 35)
-select_and_sift_match(34, 0, 'drive_by',  40, 44)
-select_and_sift_match(58, 0, 'ex_seat',  32, 36)
+# select_and_sift_match(33, 0, 'take_drive',  40, 44)
+# select_and_sift_match(33, 1, 'door',  25, 29)
+# select_and_sift_match(33, 2, 'strop_on',  35, 39)
+# select_and_sift_match(33, 3, 'strop_off',  35, 39)
+# select_and_sift_match(33, 4, 'tough_on',  35, 39)
+# select_and_sift_match(33, 5, 'print_vehicle',  20, 35)
+# select_and_sift_match(33, 6, 'update_chip',  20, 35)
+# select_and_sift_match(33, 7, 'select_weapon',  36, 40)
+# select_and_sift_match(34, 0, 'drive_by',  40, 44)
+#select_and_sift_match(58, 0, 'ex_seat',  32, 36)
 # detect_supply_box()
 # detect_random_supply()
 #test_dict()
