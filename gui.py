@@ -12,6 +12,7 @@ import threading
 import time
 
 import defs
+from dectect_mode import detect_service
 from keyborad_service import KeyboardService
 from mouse_service import MouseService
 from tcp_service import TcpServerService
@@ -229,13 +230,15 @@ class WinForm(QWidget):
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
         painter = QPainter(self)
-        painter.setOpacity(0.1)
+        painter.setOpacity(0)
         painter.setBrush(Qt.white)
         pen = QPen(Qt.red)
         pen.setWidth(5)
         painter.setPen(pen)
         rect = self.rect() - QMargins(5, 5, 5, 5)
         painter.drawRect(rect)
+        painter.setOpacity(1)
+        painter.drawText(self.rect(), Qt.AlignCenter, "Qt")
 
 
 def find_main_window():
@@ -267,14 +270,14 @@ def main():
         print(info.window_pos, info.window_size)
         wf.transparent_window.move(info.window_pos[0]-5, info.window_pos[1]-5)
         wf.transparent_window.setFixedSize(info.window_size[0]+10, info.window_size[1]+10)
-        wf.transparent_window.show()
+        # wf.transparent_window.show()
 
         mw = MainWindow()
         mw.setCentralWidget(wf)
         mw.show()
         MouseService.set_statusbar(MainWindow.sss)
         #wf.setStatusTip("pos:" + str(info.window_pos))
-
+        detect_service()
         sys.exit(app.exec_())
 
     else:

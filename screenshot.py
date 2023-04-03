@@ -474,8 +474,9 @@ def save_circle_panel(src, x, y, r, dst):
     canvas.save(dst, format="PNG")
 
 
-def save_panel_axis(id, name, left, top, right, bottom):
+def save_panel_axis(key_code, id, name, left, top, right, bottom):
     dct = {}
+    dct['key_code'] = key_code
     dct['id'] = id
     dct['name'] = name
     dct['left'] = left
@@ -489,6 +490,7 @@ def save_panel_axis(id, name, left, top, right, bottom):
             break
     lst.append(dct)
     lst = sorted(lst, key=lambda d: int(d['id']))
+    lst = sorted(lst, key=lambda d: int(d['key_code']))
 
     with open('panels.csv', 'w', newline='\n') as f:  # You will need 'wb' mode in Python 2.x
         w = csv.DictWriter(f, fieldnames=dct.keys())
@@ -503,13 +505,14 @@ def read_panel_axis():
     with open('panels.csv', 'r', newline='\n') as f:
         reader = csv.DictReader(f)
         # print(reader.line_num)
-        axis = [*reader]
-        # print(axis)
+        lst = [*reader]
+        # print(lst)
         # for row in reader:
         #     print(row.get('name'))
         f.close()
-        axis = sorted(axis, key=lambda d: d['id'])
-        return axis
+        lst = sorted(lst, key=lambda d: int(d['id']))
+        lst = sorted(lst, key=lambda d: int(d['key_code']))
+        return lst
 
 
 def detect_circle_panel(file_name, min_radius, max_radius, tag):
@@ -544,14 +547,14 @@ def detect_circle_panel(file_name, min_radius, max_radius, tag):
         return False, 0, 0, 0
 
 
-def select_and_sift_match(id, name, min_radius, max_radius):
+def select_and_sift_match(key_code, id, name, min_radius, max_radius):
     file = '3/'+name+'.png'
     b, x, y, r = detect_circle_panel(file, min_radius, max_radius, name)
     if not b:
         return
     xc, yc = x, y
     save_circle_panel(file, x, y, r, '4/' + name + '.png')
-    save_panel_axis(id, name, x - r, y - r, x + r, y + r)
+    save_panel_axis(key_code, id, name, x - r, y - r, x + r, y + r)
 
     axis = read_panel_axis()
 
@@ -779,7 +782,7 @@ def find_homo():
     img3 = cv.drawMatches(img1,kp1,img2,kp2,good,None,**draw_params)
     plt.imshow(img3, 'gray'),plt.show()
 
-test4('3/boat.png')
+#test4('3/boat.png')
 #sift_match()
 #find_homo()
 
@@ -787,13 +790,14 @@ test4('3/boat.png')
 #folder_resize()
 #resize_image('redbox.png')
 #update_screen()
-# select_and_sift_match(0, 'take_drive',  40, 44)
-# select_and_sift_match(1, 'drive_by',  40, 44)
-# select_and_sift_match(2, 'door',  25, 29)
-# select_and_sift_match(3, 'strop_on',  35, 39)
-# select_and_sift_match(4, 'strop_off',  35, 39)
-# select_and_sift_match(5, 'tough_on',  35, 39)
-#select_and_sift_match(6, 'print_vehicle',  20, 35)
+select_and_sift_match(33, 0, 'take_drive',  40, 44)
+select_and_sift_match(33, 1, 'door',  25, 29)
+select_and_sift_match(33, 2, 'strop_on',  35, 39)
+select_and_sift_match(33, 3, 'strop_off',  35, 39)
+select_and_sift_match(33, 4, 'tough_on',  35, 39)
+select_and_sift_match(33, 5, 'print_vehicle',  20, 35)
+select_and_sift_match(34, 0, 'drive_by',  40, 44)
+select_and_sift_match(58, 0, 'ex_seat',  32, 36)
 # detect_supply_box()
 # detect_random_supply()
 #test_dict()

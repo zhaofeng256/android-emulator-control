@@ -64,17 +64,46 @@ def test2():
     for i in range(3):
         select_armor(i)
 class BBB():
-    b = 0
+    b = 1
     def test(self):
-        print('test')
-
+        print('test', self.b, BBB.b)
+        self.b+=1
+        print('test', self.b, BBB.b)
+    def test1(self):
+        print('test1', self.b, BBB.b)
+        BBB.b+=1
+        print('test1', self.b, BBB.b)
 class AAA():
     def __init__(self):
         if not hasattr(AAA, 'main'):
             AAA.main = BBB()
 
+def test3():
+    #test2()
+    a = AAA()
+    #print(AAA.main.b)
+    AAA.main.test()
 
-#test2()
-a = AAA()
-#print(AAA.main.b)
-AAA.main.test()
+def test4():
+    a = [False, False, True]
+    b= [True, False, True]
+    c= [True, False, True]
+    d = [(1,2),(3,4)]
+    e = [(1,2),(3,6)]
+    print(a != b, b ==c, d==e)
+
+    f = e
+    e = [(1,2),(3,4)]
+    print(f==e)
+    print(round(1.8))
+
+b = BBB()
+b.test1()
+m = [1,2]
+print(m, m[1])
+m = [False]*4
+print(m)
+
+m = 0
+k, m ,n = 1,2,3
+print(m)
