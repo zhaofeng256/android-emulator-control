@@ -164,4 +164,8 @@ te(ad(a))
 b = ad(a)
 te(b)
 
+a = [[0]*2 for i in range(6)]
+b= [[0, 0], [1, 0], [2, 0], [0, 0]]
+print(a+b)
+
 

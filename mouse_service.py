@@ -6,7 +6,6 @@ import mouse
 import tcp_service
 from defs import EventType, TcpData, set_param1, set_param2, ButtonType, KeyEvent, WheelEvent, MapModeStatus, \
     TransPointStatus
-from keyborad_service import mode_info
 from window_info import WindowInfo, info
 
 

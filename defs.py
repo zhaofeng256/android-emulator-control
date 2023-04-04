@@ -61,7 +61,7 @@ class EventType():
     TYPE_MOUSE_BUTTON = 0x2
     TYPE_MOUSE_WHEEL = 0x3
     TYPE_CONTROL = 0x4
-    TYPE_LOCATION = 0x5
+    TYPE_ALT_LOCATION = 0x5
 
 
 class KeyEvent():
@@ -100,13 +100,17 @@ class SubModeType():
 class MapModeStatus ():
     MAP_MODE_OFF = 0
     MAP_MODE_ON = 1
+
 class TransPointStatus():
     TRANSPARENT_OFF = 0
     TRANSPARENT_ON = 1
 
+class LocationType():
+    SUPPLY_LIST = 0
+    ALTER_PANEL = 1
+
 class SupplyType():
-    SUPPLY_UNKOWN = 0
+    SUPPLY_NONE = 0
     SUPPLY_RANDOM = 1
     SUPPLY_SYSTEM = 2
     SUPPLY_CUSTOM = 3
-    MUX_BUTTON = 4

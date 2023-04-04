@@ -2,12 +2,12 @@ import threading
 
 import keyboard
 
+import switch_mode
 import tcp_service
-
-from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, ControlEvent, SubModeType, MapModeStatus, \
-    MainModeType, TransPointStatus
+from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, SubModeType, MainModeType
 
 current_sub_mode = SubModeType.NONE_SUB_MODE
+
 
 def key_event_callback(evt):
     data = TcpData()
@@ -21,14 +21,14 @@ def key_event_callback(evt):
     tcp_service.tcp_data_append(data)
     print(evt.name, evt.scan_code, evt.event_type)
 
+
 def thread_key():
     keyboard.hook(key_event_callback)
-    keyboard.add_hotkey('alt+f1', main_mode_switch, args=(str(MainModeType.MULTI_PLAYER)))
-    keyboard.add_hotkey('alt+f2', main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
-    keyboard.add_hotkey('alt+f3', main_mode_switch, args=(str(MainModeType.PVE)))
-    keyboard.add_hotkey('l', sub_mode_switch)
-    keyboard.add_hotkey('c', map_mode_switch)
-    keyboard.add_hotkey('enter', trans_point_mode_switch)
+    keyboard.add_hotkey('alt+f1', switch_mode.main_mode_switch, args=(str(MainModeType.MULTI_PLAYER)))
+    keyboard.add_hotkey('alt+f2', switch_mode.main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
+    keyboard.add_hotkey('alt+f3', switch_mode.main_mode_switch, args=(str(MainModeType.PVE)))
+    keyboard.add_hotkey('c', switch_mode.map_mode_switch)
+    keyboard.add_hotkey('enter', switch_mode.trans_point_mode_switch)
     keyboard.wait()
 
 

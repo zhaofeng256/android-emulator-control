@@ -12,7 +12,7 @@ import threading
 import time
 
 import defs
-from dectect_mode import detect_service
+from dectect_mode import DetectModeService
 from keyborad_service import KeyboardService
 from mouse_service import MouseService
 from tcp_service import TcpServerService
@@ -277,7 +277,8 @@ def main():
         mw.show()
         MouseService.set_statusbar(MainWindow.sss)
         #wf.setStatusTip("pos:" + str(info.window_pos))
-        detect_service()
+        DetectModeService().start()
+
         sys.exit(app.exec_())
 
     else:
