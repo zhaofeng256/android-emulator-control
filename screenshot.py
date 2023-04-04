@@ -7,6 +7,7 @@ from operator import itemgetter
 
 import cv2
 import matplotlib.pyplot as plt
+import numpy
 import numpy as np
 import pyautogui
 import win32con
@@ -196,7 +197,7 @@ def detect_circles_by_capture():
     return circles
 
 
-def detect_boate():
+def detect_boat():
     image = cv2.imread("boat.png")
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
@@ -377,10 +378,12 @@ def sift_match():
 
 def sift_match_zone(src, name, x1, y1, x2, y2):
     # import required libraries
+    show_img = False
     import cv2
     img1 = cv2.imread('4/' + name + '.png',cv2.IMREAD_UNCHANGED)
-    cv2.imshow('saved',img1)
-    cv2.waitKey(3)
+    if show_img:
+        cv2.imshow('saved',img1)
+        cv2.waitKey(3)
     # read two input images as grayscale
     img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
     img2 = cv2.imread(src, cv2.IMREAD_GRAYSCALE)
@@ -410,8 +413,10 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
 
     print('time elipse:', time.time() - start)
     # Draw first 50 matches.
-    out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:50], None, flags=2)
-    plt.imshow(out), plt.show()
+    if show_img:
+        out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:50], None, flags=2)
+        cv2.imshow(out)
+        cv2.waitKey()
 
     for i in range(10):
         print(matches[i].distance, x1 + kp2[matches[i].trainIdx].pt[0], y1 + kp2[matches[i].trainIdx].pt[1])
@@ -565,6 +570,30 @@ def select_and_sift_match(key_code, id, name, min_radius, max_radius):
             if found:
                 print(name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
+def detect_rectangle():
+    img = cv2.imread('d:/Untitled.png')
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    ret, thresh = cv2.threshold(gray, 50, 255, 0)
+    cv2.imshow('image', thresh)
+    cv2.waitKey()
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+    print("Number of contours detected:", len(contours))
+
+    lst = []
+    self_def = False
+    for cnt in contours:
+        x1, y1 = cnt[0][0]
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if w >20:
+                img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
+                print(w,h)
+
+    cv2.imshow('image',img)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
 
 def detect_supply_box():
     # img = cv2.imread('1/selectcar.png')#120
@@ -746,9 +775,9 @@ def find_homo():
     import cv2 as cv
     from matplotlib import pyplot as plt
     MIN_MATCH_COUNT = 10
-    img1 = cv.imread('save.png', cv.IMREAD_GRAYSCALE)  # queryImage
+    img1 = cv.imread('4/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # queryImage
     #img1 = cv.imread('4/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # queryImage
-    img2 = cv.imread('3/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # trainImage
+    img2 = cv.imread('3/print_vehicle_1.png', cv.IMREAD_GRAYSCALE)  # trainImage
     # Initiate SIFT detector
     sift = cv.SIFT_create()
     # find the keypoints and descriptors with SIFT
@@ -784,7 +813,33 @@ def find_homo():
                        flags = 2)
     img3 = cv.drawMatches(img1,kp1,img2,kp2,good,None,**draw_params)
     plt.imshow(img3, 'gray'),plt.show()
-cut_image()
+
+def paste_image():
+    files = os.listdir('3')
+    for f in files:
+        img = cv2.imread('3/'+f)
+        resized = cv2.resize(img, (1213, 682), interpolation=cv2.INTER_LINEAR)
+        img2 = numpy.zeros((720,1280,3), numpy.uint8)
+        img2[38:720,32:1245] = resized
+        cv2.imwrite('5/'+f, img2)
+
+def create_pannel_csv():
+    select_and_sift_match(33, 0, 'take_drive',  40, 44)
+    select_and_sift_match(33, 1, 'door',  25, 29)
+    select_and_sift_match(33, 2, 'strop_on',  35, 39)
+    select_and_sift_match(33, 3, 'strop_off',  35, 39)
+    select_and_sift_match(33, 4, 'tough_on',  35, 39)
+    select_and_sift_match(33, 5, 'tough_off',  35, 39)
+    select_and_sift_match(33, 6, 'print_vehicle',  20, 35)
+    select_and_sift_match(33, 7, 'update_chip',  20, 35)
+    select_and_sift_match(33, 8, 'select_weapon',  36, 40)
+    select_and_sift_match(34, 0, 'drive_by',  40, 44)
+    select_and_sift_match(58, 0, 'ex_seat',  32, 36)
+
+find_homo()
+
+#detect_rectangle()
+#cut_image()
 #test4('3/boat.png')
 #test4('moto.png')
 #sift_match()
@@ -794,16 +849,6 @@ cut_image()
 #folder_resize()
 #resize_image('redbox.png')
 #update_screen()
-# select_and_sift_match(33, 0, 'take_drive',  40, 44)
-# select_and_sift_match(33, 1, 'door',  25, 29)
-# select_and_sift_match(33, 2, 'strop_on',  35, 39)
-# select_and_sift_match(33, 3, 'strop_off',  35, 39)
-# select_and_sift_match(33, 4, 'tough_on',  35, 39)
-# select_and_sift_match(33, 5, 'print_vehicle',  20, 35)
-# select_and_sift_match(33, 6, 'update_chip',  20, 35)
-# select_and_sift_match(33, 7, 'select_weapon',  36, 40)
-# select_and_sift_match(34, 0, 'drive_by',  40, 44)
-#select_and_sift_match(58, 0, 'ex_seat',  32, 36)
 # detect_supply_box()
 # detect_random_supply()
 #test_dict()

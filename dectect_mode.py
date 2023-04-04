@@ -1,5 +1,6 @@
 import csv
 import ctypes
+import os
 import threading
 import time
 from operator import itemgetter
@@ -35,7 +36,7 @@ def get_match_item(a, M):
     for i in range(len(M)):
         m = match_count(a, M[i])
         match.append(m)
-        print('item', i, 'match', m)
+        #print('item', i, 'match', m)
 
     if max(match) == 0:
         return -1
@@ -43,62 +44,24 @@ def get_match_item(a, M):
         return np.argmax(match)
 
 
-def detect_circles_by_capture():
-    image = pyautogui.screenshot(region=[870, 350, 1280 - 870, 720 - 350])
-    image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
-                               param1=60, param2=40, minRadius=38, maxRadius=45)
-    if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")
-        print(circles)
-
-    return circles
-
-
-def detect_circles_of_file(name):
-    image = cv2.imread(name)
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
-                               param1=60, param2=40, minRadius=38, maxRadius=45)
-    if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")
-        print(circles)
-
-    return circles
-
-
-def detect_boate():
-    image = cv2.imread("boat.png")
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
-                               param1=60, param2=40, minRadius=33, maxRadius=37)
-    if circles is not None:
-        circles = np.round(circles[0, :]).astype("int")
-        print(circles)
-
-    return circles
-
-
-def detect_sub_mode(img):
-    moto = [[79, 190, 40], [79, 59, 41], [201, 55, 41]]
-    chopper = [[118, 86, 42]]
-    coyote = [[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]]
+def detect_drive_mode(img):
+    moto = cnvt_circles([[79, 190, 40], [79, 59, 41], [201, 55, 41]])
+    chopper = cnvt_circles([[118, 86, 42]])
+    coyote = cnvt_circles([[84, 263, 44], [156, 69, 40], [66, 143, 44], [290, 69, 43]])
     M = [moto, chopper, coyote]
-    boat = [338, 299, 35]
+    boat = cnvt_circles([[338, 299, 35]])
+    dc = {SubModeType.NONE_SUB_MODE:'none',SubModeType.DRIVE_MOTO:'moto',
+          SubModeType.DRIVE_CHOPPER:'chopper',SubModeType.DRIVE_COYOTE:'coyote'}
 
-    crop = img[350:720, 870:1280]
+    crop = img[round(cnvt_x(350)):wd_high, round(cnvt_x(870)):wd_width]
     blurred = cv2.GaussianBlur(crop, (5, 5), 0)
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
-                               param1=60, param2=40, minRadius=38, maxRadius=45)
+                               param1=60, param2=40, minRadius=int(cnvt_x(38)), maxRadius=int(cnvt_x(45)))
     i = -1
     if circles is not None:
         circles = np.round(circles[0, :]).astype("int")
         i = get_match_item(circles, M)
-        print('is', i)
+        #print('is', i)
     else:
         circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
                                    param1=60, param2=40, minRadius=33, maxRadius=37)
@@ -106,10 +69,19 @@ def detect_sub_mode(img):
             circles = np.round(circles[0, :]).astype("int")
             print(circles)
             if len(circles) == 1:
-                if similar_point(circles[0], boat):
+                if similar_point(circles[0], boat[0]):
                     i = 0
-                    print('boat')
-    return i
+
+    i += SubModeType.SUB_MODE_OFFSET         #print('boat')
+    return i, dc[i]
+
+
+def send_sub_mode(mod):
+    data = TcpData()
+    data.type = EventType.TYPE_CONTROL
+    set_param1(data, ControlEvent.SUB_MODE)
+    set_param2(data, mod)
+    tcp_service.tcp_data_append(data)
 
 
 def sift_match_zone(img1, img2, rect, kp1, des1, sift, bf):
@@ -121,31 +93,51 @@ def sift_match_zone(img1, img2, rect, kp1, des1, sift, bf):
     y2 = round(float(y2)) + 2
     crop = img2[y1:y2, x1:x2]
 
-    # cv2.imshow("crop",crop)
-    # cv2.waitKey(3)
-    # print(x1,x2,y1,y2, crop.shape)
-
     kp2, des2 = sift.detectAndCompute(crop, None)
     if len(kp2) < 10:
         return False, 0, 0
 
-    matches = bf.match(des1, des2)
-    matches = sorted(matches, key=lambda val: val.distance)
-    # print('matches num:', len(matches))
-    # for m in matches:
-    #     print(m.distance)
+    #matches = bf.match(des1, des2)
+    #matches = sorted(matches, key=lambda val: val.distance)
 
+    matches = bf.knnMatch(des1, des2, k=2)
+    good = []
+    rs = []
+    for m, n in matches:
+        ratio = m.distance / n.distance
+        if ratio < 0.3:
+            good.append(m)
+            rs.append(ratio)
+
+    min_r = 1
+    n_good = len(good)
+    if n_good > 0:
+        min_r = min(rs)
     # Draw first 5 matches need in Main Thread
     if show_img:
-        out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:5], None, flags=2)
-        plt.imshow(out), plt.show()
+        #out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:5], None, flags=2)
+        if n_good > 2:
+            print('good', n_good, 'best', min_r)
+            for i in range(n_good):
+                print(rs[i], good[i].distance, x1 + kp2[good[i].trainIdx].pt[0], y1 + kp2[good[i].trainIdx].pt[1])
 
-        for i in range(5):
-            print(matches[i].distance, x1 + kp2[matches[i].trainIdx].pt[0], y1 + kp2[matches[i].trainIdx].pt[1])
+            out = cv2.drawMatches(img1, kp1, crop, kp2, good, None, flags=2)
+            imS = cv2.resize(out, (800, 400))
+            cv2.imshow("match", imS)
+            cv2.waitKey()
 
-    if matches[0].distance < 30:
-        print(matches[0].distance)
-        return True, x1 + kp2[matches[0].trainIdx].pt[0], y1 + kp2[matches[0].trainIdx].pt[1]
+        # for i in range(5):
+        #     print(matches[i].distance, x1 + kp2[matches[i].trainIdx].pt[0], y1 + kp2[matches[i].trainIdx].pt[1])
+
+    # if matches[0].distance < 60:
+    #     print('match distance',matches[0].distance)
+    #     return True, x1 + kp2[matches[0].trainIdx].pt[0], y1 + kp2[matches[0].trainIdx].pt[1]
+    # else:
+    #     return False, 0, 0
+
+    if n_good > 0:
+        best = good[np.argmin(rs)]
+        return True, x1 + kp2[best.trainIdx].pt[0], y1 + kp2[best.trainIdx].pt[1]
     else:
         return False, 0, 0
 
@@ -181,16 +173,12 @@ def send_supply_position(type, id, p):
 
 
 def detect_supply_box(img):
-    left = 368
-    right = 877
-    top = 286
-    bottom = 571
-
-    target_width = 216
-    target_high = 61
-
-    self_def_width = 248
-    self_def_high = 176
+    # custom and system supply religion
+    left, top, right, bottom = [int(i) for i in cnvt_rect(368, 286, 877, 571)]
+    # system supply size
+    target_width, target_high = cnvt_size(216, 61)
+    # custom supply size
+    self_def_width, self_def_high = cnvt_size(248, 176)
 
     crop = img[top:bottom, left:right]
     ret, thresh = cv2.threshold(crop, 120, 255, 0)
@@ -221,12 +209,9 @@ def detect_supply_box(img):
 
 
 def detect_supply(img):
-    left = 681
-    right = 933
-    top = 283
-    bottom = 571
-    target_width = 216
-    target_high = 60
+    # random supply religion and size
+    left, top, right, bottom = [int(i) for i in cnvt_rect(681, 283, 933, 571)]
+    target_width, target_high = cnvt_size(216, 60)
 
     crop = img[top:bottom, left:right]
     ret, thresh = cv2.threshold(crop, 120, 255, 0)
@@ -251,12 +236,8 @@ def detect_supply(img):
 
 
 def detect_select_vehicle(img):
-    left = 536
-    right = 736
-    top = 472
-    bottom = 527
-    target_width = 192
-    target_high = 47
+    left, top, right, bottom = [int(i) for i in cnvt_rect(536, 472, 736, 527)]
+    target_width, target_high = cnvt_size(192, 47)
 
     crop = img[top:bottom, left:right]
     ret, thresh = cv2.threshold(crop, 120, 255, 0)
@@ -277,13 +258,63 @@ def detect_select_vehicle(img):
     return found, a, b
 
 
+mc_width = 1280
+mc_height = 720
+
+wd_left = 32
+wd_top = 38
+wd_width = 1213
+wd_high = 682
+
+
+def cnvt_x(x):
+    return x * wd_width / mc_width
+
+
+def cnvt_y(y):
+    return y * wd_high / mc_height
+
+
+def cnvt_pos(p):
+    return round(cnvt_x(p[0])), round(cnvt_y(p[1]))
+
+
+
+def cnvt_region(x, y, w, h):
+    return wd_left + cnvt_x(x), wd_top + cnvt_y(y), cnvt_x(w), cnvt_y(h)
+
+
+def cnvt_rect(left, top, right, bottom):
+    return cnvt_x(left), cnvt_y(top), cnvt_x(right), cnvt_y(bottom)
+
+
+def cnvt_size(width, high):
+    return cnvt_x(width), cnvt_y(high)
+
+
+def cnvt_circles(circles):
+    return [[cnvt_x(c[0]), cnvt_y(c[1]), cnvt_x(c[2])] for c in circles]
+
+
+def revt_x(x):
+    return round(x * mc_width / wd_width)
+
+
+def revt_y(y):
+    return round(y * mc_height / wd_high)
+
+
+def recvt_pos(x, y):
+    return round(revt_x(x)), round(revt_y(y))
+
+
 class DetectModeService():
     show_img = True
-    self_def_confirm = (693, 596)
-    pos_prev = (500, 500)
-    pos_next = (775, 500)
-    pos_confirm = (636, 542)
-    pos_auto_pick = (913, 218)
+    self_def_confirm = (693, 596) # red supply enter
+    pos_prev = (500, 500) # prev vehicle
+    pos_next = (775, 500) # next vehicle
+    pos_confirm = (636, 542) # vehicle confirm
+    pos_auto_pick = (913, 218) # auto pick
     bak_f_x, bak_f_y = (0, 0)
     bak_g_x, bak_g_y = (0, 0)
     bak_ex_x, bak_ex_y = (0, 0)
@@ -307,7 +338,7 @@ class DetectModeService():
             img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
             lsg_img.append(img1)
             left, top, right, bottom = float(d['left']), float(d['top']), float(d['right']), float(d['bottom'])
-            lst_rect.append((left, top, right, bottom))
+            lst_rect.append(cnvt_rect(left, top, right, bottom))
             kp1, des1 = sift.detectAndCompute(img1, None)
             lst_kp.append(kp1)
             lst_des.append(des1)
@@ -318,7 +349,8 @@ class DetectModeService():
 
         idx = 0
         while True:
-            img = pyautogui.screenshot(region=(0, 0, 1280, 720))
+            r =[int(i) for i in cnvt_region(0, 0, mc_width, mc_height)]
+            img = pyautogui.screenshot(region=r)
             cv2.destroyAllWindows()
             img2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
@@ -331,13 +363,15 @@ class DetectModeService():
                     if found:
                         xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
                         yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', (f_x, f_y), 'center offset is', (f_x - xc, f_y - yc))
+                        print(axis[i]['name'], 'found at', recvt_pos(f_x, f_y), 'center offset is',
+                              (round(f_x - xc), round(f_y - yc)))
                         break
 
             if f_x != DetectModeService.bak_f_x or f_y != DetectModeService.bak_f_y:
                 DetectModeService.bak_f_x = f_x
                 DetectModeService.bak_f_y = f_y
-                send_supply_position(SupplyType.MUX_BUTTON, 33, (round(f_x), round(f_y)))
+                # send F
+                send_supply_position(SupplyType.MUX_BUTTON, 33, (revt_x(f_x), revt_y(f_y)))
                 if DetectModeService.show_img:
                     cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                 (0, 0, 255), 2)
@@ -350,17 +384,17 @@ class DetectModeService():
                     if found:
                         xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
                         yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', (g_x, g_y), 'center offset is', (g_x - xc, g_y - yc))
+                        print(axis[i]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
+                              (round(g_x - xc), round(g_y - yc)))
                         break
 
             if g_x != DetectModeService.bak_g_x or g_y != DetectModeService.bak_g_y:
-                DetectModeService.bak_g_x = g_x
-                DetectModeService.bak_g_y = g_y
-                if g_x != 0 and g_y != 0:
-                    send_supply_position(SupplyType.MUX_BUTTON, 34, (round(g_x), round(g_y)))
-                    if DetectModeService.show_img:
-                        cv2.putText(img2, 'G', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                    (0, 0, 255), 2)
+                DetectModeService.bak_g_x,DetectModeService.bak_g_y = g_x, g_y
+                # send G
+                send_supply_position(SupplyType.MUX_BUTTON, 34, (revt_x(g_x), revt_y(g_y)))
+                if DetectModeService.show_img:
+                    cv2.putText(img2, 'G', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                (0, 0, 255), 2)
 
             # 3. find supply
             t_s, lst_s = detect_supply(gray)
@@ -368,17 +402,17 @@ class DetectModeService():
                 DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
                 for i in range(len(lst_s)):
                     # send new position
-                    x = round(lst_s[i][0])
-                    y = round(lst_s[i][1])
-                    send_supply_position(t_s, i, (x, y))
+                    x = revt_x(lst_s[i][0])
+                    y = revt_y(lst_s[i][1])
+                    send_supply_position(t_s, i+1, (x, y))
 
                     # print result
                     if t_s == SupplyType.SUPPLY_RANDOM:
-                        print('random supply', i + 1, (lst_s[i][0], lst_s[i][1]))
+                        print('random supply', i + 1, recvt_pos(lst_s[i][0], lst_s[i][1]))
                     elif t_s == SupplyType.SUPPLY_SYSTEM:
-                        print('system supply', i + 1, (lst_s[i][0], lst_s[i][1]))
+                        print('system supply', i + 1, recvt_pos(lst_s[i][0], lst_s[i][1]))
                     elif t_s == SupplyType.SUPPLY_CUSTOM:
-                        print('custom supply', i + 1, (lst_s[i][0], lst_s[i][1]))
+                        print('custom supply', i + 1, recvt_pos(lst_s[i][0], lst_s[i][1]))
 
                     # show result image
                     if DetectModeService.show_img:
@@ -387,25 +421,32 @@ class DetectModeService():
                         a = (round(lst_s[i][0] - 0.5 * w), round(lst_s[i][1] - 0.5 * h))
                         b = (round(lst_s[i][0] + 0.5 * w), round(lst_s[i][1] + 0.5 * h))
                         cv2.rectangle(img2, a, b, (0, 255, 0), 2)
-                        cv2.putText(img2, str(i + 1), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                        cv2.putText(img2, str(i + 1), (round(lst_s[i][0]), round(lst_s[i][1])),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                 # confirm button position
                 if t_s == SupplyType.SUPPLY_CUSTOM:
                     send_supply_position(SupplyType.MUX_BUTTON, 33, DetectModeService.self_def_confirm)
                     if DetectModeService.show_img:
-                        cv2.putText(img2, 'F', DetectModeService.self_def_confirm, cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                    (0, 0, 255), 2)
+                        cv2.putText(img2, 'F', cnvt_pos(DetectModeService.self_def_confirm),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
             # 4. find select vehicle
             found, a, b = detect_select_vehicle(gray)
             if found != DetectModeService.bak_sel_vel:
                 DetectModeService.bak_sel_vel = found
                 if found:
+                    send_supply_position(SupplyType.MUX_BUTTON, 16, DetectModeService.pos_prev)
+                    send_supply_position(SupplyType.MUX_BUTTON, 18, DetectModeService.pos_next)
+                    send_supply_position(SupplyType.MUX_BUTTON, 33, DetectModeService.pos_confirm)
                     if DetectModeService.show_img:
                         cv2.rectangle(2, a, b, (0, 255, 0), 2)
-                        cv2.putText(img2, 'Q', DetectModeService.pos_prev, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                        cv2.putText(img2, 'E', DetectModeService.pos_next, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                        cv2.putText(img2, 'F', DetectModeService.pos_confirm, cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255),
+                        cv2.putText(img2, 'Q', cnvt_pos(DetectModeService.pos_prev), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (0, 0, 255), 2)
+                        cv2.putText(img2, 'E', cnvt_pos(DetectModeService.pos_next), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (0, 0, 255), 2)
+                        cv2.putText(img2, 'F', cnvt_pos(DetectModeService.pos_confirm), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (0, 0, 255),
                                     2)
 
             # 5. find exchange seat
@@ -416,7 +457,7 @@ class DetectModeService():
                     if found:
                         xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
                         yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', (g_x, g_y), 'center offset is', (g_x - xc, g_y - yc))
+                        print(axis[i]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is', (round(g_x - xc), round(g_y - yc)))
                         break
 
             if g_x != DetectModeService.bak_ex_x or g_y != DetectModeService.bak_ex_y:
@@ -430,11 +471,11 @@ class DetectModeService():
 
                     # detect veheicle type
                     s0 = time.time()
-                    mod = detect_sub_mode(gray)
-                    print(time.time() - s0)
+                    mod, des = detect_drive_mode(gray)
+                    print('time elapse', time.time() - s0)
 
-                    print("switch to sub mode", mod)
-                    send_sub_mode(mod + SubModeType.SUB_MODE_OFFSET)
+                    print("switch to sub mode", des)
+                    send_sub_mode(mod)
 
             # 6. display result
             if DetectModeService.show_img:
@@ -446,11 +487,16 @@ class DetectModeService():
                 cv2.destroyAllWindows()
 
             time.sleep(0.1)
-            lst_pic = ('3/take_drive.png', '3/moto.png', '3/moto.png', '3/take_drive.png', '3/random_supply.png')
+            # lst_pic = ['print_vehicle.png','select_vehicle.png','select_weapon.png',
+            #            'tough_on.png','tough_off.png','update_chip.png', 'moto.png',
+            #            'take_drive.png', 'random_supply.png','system_supply.png',
+            #            'custom_supply.png','tough_on.png','door.png']
+            lst_pic = os.listdir('3')
+            show_full_screen(lst_pic[idx%len(lst_pic)])
             idx += 1
-            show_full_screen(lst_pic[idx])
             # show_full_screen('3/custom_supply.png')
             time.sleep(1)
+
     def start(self):
         t = threading.Thread(target=self.detect_thread, args=())
         t.daemon = True
@@ -459,7 +505,7 @@ class DetectModeService():
 
 
 def show_full_screen(name):
-    image = cv2.imread(name)
+    image = cv2.imread('5/'+name)
     cv2.namedWindow('image', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow('image', image)
@@ -473,35 +519,41 @@ def ll():
 
 
 if __name__ == '__main__':
-    #show_full_screen('3/moto.png')
+    # show_full_screen('crop_none.png')
     # ll()
-    show_full_screen('3/select_vehicle.png')
+    # show_full_screen('select_weapon.png')
+    # ll()
+    # show_full_screen('update_chip.png')
+    # ll()
+    # show_full_screen('moto.png')
+    # ll()
+    # show_full_screen('select_vehicle.png')
+    # ll()
+    show_full_screen('print_vehicle_1.png')
     ll()
-    # show_full_screen('3/print_vehicle_1.png')
+    # show_full_screen('tough_on.png')
     # ll()
-    # show_full_screen('3/tough_on.png')
+    # show_full_screen('random_supply.png')
     # ll()
-    # show_full_screen('3/random_supply.png')
+    # show_full_screen('custom_supply.png')
     # ll()
-    # show_full_screen('3/custom_supply.png')
+    # show_full_screen('system_supply.png')
     # ll()
-    # show_full_screen('3/system_supply.png')
-    # ll()
-    # show_full_screen('3/system_supply_1.png')
+    # show_full_screen('system_supply_1.png')
     # ll()
     # t = detect_service()
     # t.join()
     #
-    # show_full_screen('3/take_drive.png')
+    # show_full_screen('take_drive.png')
     # ll()
     #
-    # show_full_screen('3/door.png')
+    # show_full_screen('door.png')
     # ll()
     #
-    # show_full_screen('3/strop_on.png')
+    # show_full_screen('strop_on.png')
     # ll()
     #
-    # show_full_screen('3/strop_off.png')
+    # show_full_screen('strop_off.png')
     # ll()
     # img1 = cv2.imread('4/' + name + '.png')
     # img1 = cv2.cvtColor(np.array(img1), cv2.COLOR_RGB2BGR)
@@ -526,14 +578,6 @@ def main_mode_switch(mode):
     data.type = EventType.TYPE_CONTROL
     set_param1(data, ControlEvent.MAIN_MODE)
     set_param2(data, int(mode))
-    tcp_service.tcp_data_append(data)
-
-
-def send_sub_mode(i):
-    data = TcpData()
-    data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.SUB_MODE)
-    set_param2(data, i)
     tcp_service.tcp_data_append(data)
 
 
