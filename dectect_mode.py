@@ -351,26 +351,33 @@ class DetectModeService():
             r = [int(i) for i in cnvt_region(0, 0, mc_width, mc_height)]
             img = pyautogui.screenshot(region=r)
             ########################
-            cv2.destroyAllWindows()
+            # cv2.destroyAllWindows()
             ########################
             img2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
             # 1. find alternate panels
             f_x, f_y = DetectModeService.pos_auto_pick
+            j = 0
+            found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 33:
                     found, f_x, f_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
                     if found:
-                        xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
-                        yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', recvt_pos(f_x, f_y), 'center offset is',
-                              (round(f_x - xc), round(f_y - yc)))
+                        j = i
                         break
 
             if abs(f_x - DetectModeService.bak_f_x) > 10 or abs(f_y - DetectModeService.bak_f_y) > 10:
                 DetectModeService.bak_f_x = f_x
                 DetectModeService.bak_f_y = f_y
+
+                # print
+                if found:
+                    xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
+                    yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
+                    print(axis[j]['name'], 'found at', recvt_pos(f_x, f_y), 'center offset is',
+                          (round(f_x - xc), round(f_y - yc)))
+
                 # send F
                 send_supply_position(LocationType.ALTER_PANEL, 33, (revt_x(f_x), revt_y(f_y)))
                 if DetectModeService.show_img:
@@ -378,19 +385,23 @@ class DetectModeService():
                                 (0, 0, 255), 2)
 
             # 2. find G
-            g_x = g_y = 0
+            j = g_x = g_y = 0
+            found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 34:
                     found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
                     if found:
-                        xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
-                        yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
-                              (round(g_x - xc), round(g_y - yc)))
+                        j = i
                         break
 
             if abs(g_x - DetectModeService.bak_g_x) > 10 or abs(g_y - DetectModeService.bak_g_y) > 10:
                 DetectModeService.bak_g_x, DetectModeService.bak_g_y = g_x, g_y
+                # print
+                if found:
+                    xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
+                    yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
+                    print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
+                          (round(g_x - xc), round(g_y - yc)))
                 # send G
                 send_supply_position(LocationType.ALTER_PANEL, 34, (revt_x(g_x), revt_y(g_y)))
                 if DetectModeService.show_img:
@@ -454,23 +465,31 @@ class DetectModeService():
                         cv2.putText(img2, 'F', cnvt_pos(DetectModeService.pos_confirm), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                     (0, 0, 255),
                                     2)
-
+                else:
+                    # disable alter keys
+                    send_supply_position(LocationType.ALTER_PANEL, 16, (0,0))
+                    send_supply_position(LocationType.ALTER_PANEL, 18, (0,0))
+                    send_supply_position(LocationType.ALTER_PANEL, 33, (f_x,f_y))
             # 5. find exchange seat
-            g_x = g_y = 0
+            j = g_x = g_y = 0
+            found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 58:
                     found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
                     if found:
-                        xc = (lst_rect[i][0] + lst_rect[i][2]) / 2
-                        yc = (lst_rect[i][1] + lst_rect[i][3]) / 2
-                        print(axis[i]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
-                              (round(g_x - xc), round(g_y - yc)))
+                        j = i
                         break
 
-            if g_x != DetectModeService.bak_ex_x or g_y != DetectModeService.bak_ex_y:
+            if abs(g_x-DetectModeService.bak_ex_x)>10 or abs(g_y-DetectModeService.bak_ex_y)>10:
                 DetectModeService.bak_ex_x = g_x
                 DetectModeService.bak_ex_y = g_y
-                if g_x != 0 and g_y != 0:
+                if found:
+                    # print
+                    xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
+                    yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
+                    print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
+                          (round(g_x - xc), round(g_y - yc)))
+
                     if DetectModeService.show_img:
                         cv2.putText(img2, 'EX', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                     (0, 0, 255), 2)
@@ -482,6 +501,9 @@ class DetectModeService():
 
                     print("switch to sub mode", des)
                     send_sub_mode(mod)
+                else:
+                    print("switch to main mode")
+                    send_sub_mode(SubModeType.NONE_SUB_MODE)
 
             # 6. display result
             if DetectModeService.show_img:
@@ -497,10 +519,11 @@ class DetectModeService():
             #            'tough_on.png','tough_off.png','update_chip.png', 'moto.png',
             #            'take_drive.png', 'random_supply.png','system_supply.png',
             #            'custom_supply.png','tough_on.png','door.png']
-            lst_pic = os.listdir('3')
-            show_full_screen(lst_pic[idx % len(lst_pic)])
-            idx += 1
-            time.sleep(1)
+
+            # lst_pic = os.listdir('5')
+            # show_full_screen(lst_pic[idx % len(lst_pic)])
+            # idx += 1
+            # time.sleep(1)
 
     def start(self):
         t = threading.Thread(target=self.detect_thread, args=())
