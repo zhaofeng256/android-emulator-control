@@ -6,6 +6,7 @@ import mouse
 import tcp_service
 from defs import EventType, TcpData, set_param1, set_param2, ButtonType, KeyEvent, WheelEvent, MapModeStatus, \
     TransPointStatus
+from switch_mode import mode_info
 from window_info import WindowInfo, info
 
 
@@ -45,11 +46,11 @@ def mouse_event_callback(evt):
             set_param1(data, ButtonType.BACK)
         elif evt.button == 'x2':
             set_param1(data, ButtonType.FORWARD)
-        if evt.event_type == 'down':
+        if evt.event_type == 'down' or evt.event_type == 'double':
             set_param2(data, KeyEvent.KEY_DOWN)
         elif evt.event_type == 'up':
             set_param2(data, KeyEvent.KEY_UP)
-        # print('button', evt.button, evt.event_type)
+        #print('button', evt.button, evt.event_type)
     elif t == mouse._mouse_event.WheelEvent:
         if MouseService.stop_move:
             return

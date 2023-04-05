@@ -67,9 +67,9 @@ class TcpServerService(object):
         while True:
             send_data = tcp_data_pop()
             # print("len of send_data", sys.getsizeof(send_data))
-            print(int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
-                   int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
-                   send_data.checksum)
+            # print(int.from_bytes(send_data.id, 'little'), struct.unpack('B', send_data.type)[0],
+            #        int.from_bytes(send_data.param1, 'little'), int.from_bytes(send_data.param2, 'little'),
+            #        send_data.checksum)
 
 
             try:

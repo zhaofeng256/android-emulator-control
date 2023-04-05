@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 
 import cv2
@@ -7,22 +8,39 @@ import keyboard
 idx = 0
 lst_pic = os.listdir('5')
 t = len(lst_pic)
+exit_app = False
+c = threading.Condition()
+dc = {}
+
+
 def key_event_callback(evt):
-    global idx
+    global idx, exit_app, dc
+
+    if evt.name in dc.keys():
+        if dc[evt.name] == evt.event_type:
+            return
+    print(evt.scan_code, evt.event_type)
+    dc[evt.name] = evt.event_type
+
     if evt.event_type == 'down':
         if evt.scan_code == 72:
-            idx -= 1
-            show_full_screen(lst_pic[idx%t])
-            pass
-        elif evt.scan_code == 80:
-            idx += 1
-            show_full_screen(lst_pic[idx%t])
-            pass
-    #print(evt.name, evt.scan_code, evt.event_type)
+            with c:
+                idx -= 1
+                print('call', idx)
 
-def show_full_screen(name):#
+
+        elif evt.scan_code == 80:
+            with c:
+                idx += 1
+                print('call', idx)
+
+
+        elif evt.scan_code == 66:
+            exit_app = True
+
+
+def show_full_screen(name):  #
     print(name)
-    cv2.destroyAllWindows()
     image = cv2.imread('5/' + name)
     cv2.namedWindow('image', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -31,6 +49,19 @@ def show_full_screen(name):#
 
 
 if __name__ == '__main__':
-    keyboard.hook(key_event_callback)
-    while True:
-        time.sleep(1)
+    keyboard.hook(key_event_callback, suppress=False)
+
+    bak_name = ''
+    while not exit_app:
+        time.sleep(0.1)
+        with c:
+            name = lst_pic[idx % t]
+        if name == bak_name:
+            continue
+        print(idx)
+        show_full_screen(name)
+
+# lst_pic = ['print_vehicle.png','select_vehicle.png','select_weapon.png',
+#            'tough_on.png','tough_off.png','update_chip.png', 'moto.png',
+#            'take_drive.png', 'random_supply.png','system_supply.png',
+#            'custom_supply.png','tough_on.png','door.png']

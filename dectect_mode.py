@@ -311,11 +311,12 @@ def recvt_pos(x, y):
 
 class DetectModeService():
     show_img = False
-    self_def_confirm = (693, 596)  # red supply enter
+    custom_confirm = (693, 596)  # red supply enter
+    supply_box_close = (851, 217)
+    random_supply_close = (913,217)
     pos_prev = (500, 500)  # prev vehicle
     pos_next = (775, 500)  # next vehicle
     pos_confirm = (636, 542)  # vehicle confirm
-    pos_auto_pick = (913, 218)  # auto pick
     bak_f_x, bak_f_y = (0, 0)
     bak_g_x, bak_g_y = (0, 0)
     bak_ex_x, bak_ex_y = (0, 0)
@@ -323,6 +324,9 @@ class DetectModeService():
     bak_t_s = SupplyType.SUPPLY_NONE
     bak_lst_s = [(0, 0, 0, 0) for i in range(6)]
     bak_sel_vel = False
+
+    f_found = [False]*3
+    bak_f_found = [False]*3
 
     def detect_thread(self):
         axis = read_panel_axis()
@@ -346,19 +350,14 @@ class DetectModeService():
             # print(name, 'keypoint num', len(kp1))
 
         n = len(axis)
-        idx = 0
         while True:
             r = [int(i) for i in cnvt_region(0, 0, mc_width, mc_height)]
             img = pyautogui.screenshot(region=r)
-            ########################
-            # cv2.destroyAllWindows()
-            ########################
             img2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
-            # 1. find alternate panels
-            f_x, f_y = DetectModeService.pos_auto_pick
-            j = 0
+            # 1. find alternate F panels
+            j, f_x , f_y = 0,0,0
             found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 33:
@@ -366,6 +365,8 @@ class DetectModeService():
                     if found:
                         j = i
                         break
+
+            DetectModeService.f_found[0] = found
 
             if abs(f_x - DetectModeService.bak_f_x) > 10 or abs(f_y - DetectModeService.bak_f_y) > 10:
                 DetectModeService.bak_f_x = f_x
@@ -378,14 +379,14 @@ class DetectModeService():
                     print(axis[j]['name'], 'found at', recvt_pos(f_x, f_y), 'center offset is',
                           (round(f_x - xc), round(f_y - yc)))
 
-                # send F
-                send_supply_position(LocationType.ALTER_PANEL, 33, (revt_x(f_x), revt_y(f_y)))
-                if DetectModeService.show_img:
-                    cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                (0, 0, 255), 2)
+                    # send F position
+                    send_supply_position(LocationType.ALTER_PANEL, 33, (revt_x(f_x), revt_y(f_y)))
+                    if DetectModeService.show_img:
+                        cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                    (0, 0, 255), 2)
 
-            # 2. find G
-            j = g_x = g_y = 0
+            # 2. find G panels
+            j, g_x ,g_y = 0,0,0
             found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 34:
@@ -410,6 +411,12 @@ class DetectModeService():
 
             # 3. find supply
             t_s, lst_s = detect_supply(gray)
+
+            if t_s == SupplyType.SUPPLY_CUSTOM:
+                DetectModeService.f_found[1] = True
+            else:
+                DetectModeService.f_found[1] = False
+
             if t_s != DetectModeService.bak_t_s or lst_s != DetectModeService.bak_lst_s:
 
                 for i in range(len(lst_s)):
@@ -439,17 +446,39 @@ class DetectModeService():
                             cv2.putText(img2, str(i + 1), (round(lst_s[i][0]), round(lst_s[i][1])),
                                         cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-                # confirm button position
-                if t_s == SupplyType.SUPPLY_CUSTOM and t_s != DetectModeService.bak_t_s:
-                    send_supply_position(LocationType.ALTER_PANEL, 33, DetectModeService.self_def_confirm)
-                    if DetectModeService.show_img:
-                        cv2.putText(img2, 'F', cnvt_pos(DetectModeService.self_def_confirm),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                if t_s != DetectModeService.bak_t_s:
+                    # random ESC
+                    if t_s == SupplyType.SUPPLY_RANDOM:
+                        send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.random_supply_close)
+                        if DetectModeService.show_img:
+                            cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.random_supply_close),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    # system ESC
+                    elif t_s == SupplyType.SUPPLY_SYSTEM:
+                        send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.supply_box_close)
+                        if DetectModeService.show_img:
+                            cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    # custom ESC and F
+                    elif t_s == SupplyType.SUPPLY_CUSTOM:
+                        send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.supply_box_close)
+                        send_supply_position(LocationType.ALTER_PANEL, 33, DetectModeService.custom_confirm)
+                        if DetectModeService.show_img:
+                            cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                            cv2.putText(img2, 'F', cnvt_pos(DetectModeService.custom_confirm),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                    # none ESC. Later F
+                    elif t_s == SupplyType.SUPPLY_NONE:
+                        send_supply_position(LocationType.ALTER_PANEL, 1, (0,0))
 
                 DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
 
             # 4. find select vehicle
             found, a, b = detect_select_vehicle(gray)
+
+            DetectModeService.f_found[2] = found
+
             if found != DetectModeService.bak_sel_vel:
                 DetectModeService.bak_sel_vel = found
                 if found:
@@ -469,9 +498,15 @@ class DetectModeService():
                     # disable alter keys
                     send_supply_position(LocationType.ALTER_PANEL, 16, (0,0))
                     send_supply_position(LocationType.ALTER_PANEL, 18, (0,0))
-                    send_supply_position(LocationType.ALTER_PANEL, 33, (f_x,f_y))
+
+            #  every F panel disappeared
+            if DetectModeService.f_found != DetectModeService.bak_f_found:
+                DetectModeService.bak_f_found = DetectModeService.f_found
+                if DetectModeService.f_found == [False]*3:
+                    send_supply_position(LocationType.ALTER_PANEL, 33, (0, 0))
+
             # 5. find exchange seat
-            j = g_x = g_y = 0
+            j, g_x ,g_y = 0,0,0
             found = False
             for i in range(n):
                 if int(axis[i]['key_code']) == 58:
@@ -515,15 +550,6 @@ class DetectModeService():
                 cv2.destroyAllWindows()
 
             time.sleep(0.1)
-            # lst_pic = ['print_vehicle.png','select_vehicle.png','select_weapon.png',
-            #            'tough_on.png','tough_off.png','update_chip.png', 'moto.png',
-            #            'take_drive.png', 'random_supply.png','system_supply.png',
-            #            'custom_supply.png','tough_on.png','door.png']
-
-            # lst_pic = os.listdir('5')
-            # show_full_screen(lst_pic[idx % len(lst_pic)])
-            # idx += 1
-            # time.sleep(1)
 
     def start(self):
         t = threading.Thread(target=self.detect_thread, args=())

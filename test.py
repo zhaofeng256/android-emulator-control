@@ -168,4 +168,9 @@ a = [[0]*2 for i in range(6)]
 b= [[0, 0], [1, 0], [2, 0], [0, 0]]
 print(a+b)
 
-
+a = [False]*3
+b = a.copy()
+a[0] = True
+print(a, b)
+bak_f_x, bak_f_y = 0, 0
+print(bak_f_x, bak_f_y)

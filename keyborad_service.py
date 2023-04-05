@@ -8,8 +8,15 @@ from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, SubModeTy
 
 current_sub_mode = SubModeType.NONE_SUB_MODE
 
-
+dc_kbd = {}
 def key_event_callback(evt):
+    # filter same press
+    global dc_kbd
+    if evt.name in dc_kbd.keys():
+        if dc_kbd[evt.name] == evt.event_type:
+            return
+    dc_kbd[evt.name] = evt.event_type
+
     data = TcpData()
     data.type = EventType.TYPE_KEYBOARD
     set_param1(data, evt.scan_code)
@@ -28,7 +35,7 @@ def thread_key():
     keyboard.add_hotkey('alt+f2', switch_mode.main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
     keyboard.add_hotkey('alt+f3', switch_mode.main_mode_switch, args=(str(MainModeType.PVE)))
     keyboard.add_hotkey('c', switch_mode.map_mode_switch)
-    keyboard.add_hotkey('enter', switch_mode.trans_point_mode_switch)
+    keyboard.add_hotkey('right shift', switch_mode.trans_point_mode_switch)
     keyboard.wait()
 
 
