@@ -1,13 +1,12 @@
 import threading
-import time
 
 import mouse
 
 import tcp_service
 from defs import EventType, TcpData, set_param1, set_param2, ButtonType, KeyEvent, WheelEvent, MapModeStatus, \
     TransPointStatus
-from switch_mode import mode_info
-from window_info import WindowInfo, info
+from switch_mode import ModeInfo
+from window_info import get_relative_position
 
 
 def mouse_event_callback(evt):
@@ -24,15 +23,19 @@ def mouse_event_callback(evt):
         if MouseService.stop_move:
             return
         data.type = EventType.TYPE_MOUSE_AXIS
-        if mode_info.map_mode_on == MapModeStatus.MAP_MODE_ON or \
-                mode_info.transparent_mode_on == TransPointStatus.TRANSPARENT_ON:
-            x, y = info.get_relative_position(MouseService.mouse_axis_x, MouseService.mouse_axis_y)
+
+        # show axis at status bar
+        if ModeInfo.map_mode_on == MapModeStatus.MAP_MODE_ON or \
+                ModeInfo.transparent_mode_on == TransPointStatus.TRANSPARENT_ON:
+            x, y = get_relative_position(MouseService.mouse_axis_x, MouseService.mouse_axis_y)
         else:
             x, y = evt.x, evt.y
         MouseService.statusbar.showMessage(str(x) + ',' + str(y))
-        # print('move', x, y, evt.time)
-        set_param1(data, x)
-        set_param2(data, y)
+        # print('move', evt.x, evt.y, evt.time)
+
+        # send real mouse axis
+        set_param1(data, evt.x)
+        set_param2(data, evt.y)
 
     elif t == mouse._mouse_event.ButtonEvent:
         data.type = EventType.TYPE_MOUSE_BUTTON
@@ -50,7 +53,7 @@ def mouse_event_callback(evt):
             set_param2(data, KeyEvent.KEY_DOWN)
         elif evt.event_type == 'up':
             set_param2(data, KeyEvent.KEY_UP)
-        #print('button', evt.button, evt.event_type)
+        # print('button', evt.button, evt.event_type)
     elif t == mouse._mouse_event.WheelEvent:
         if MouseService.stop_move:
             return
@@ -74,7 +77,7 @@ def thread_mouse():
 
 
 class MouseService:
-    stop_move = True
+    stop_move = False
     mouse_axis_x = 0
     mouse_axis_y = 0
     mouse_timeout = 0

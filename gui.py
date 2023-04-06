@@ -1,22 +1,23 @@
 import ctypes
+import re
 import subprocess
 import sys
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import Qt, QPoint, QSize, QRect, QMargins
-from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QLabel, QPushButton, QComboBox, QHBoxLayout, QStatusBar, \
-    QMainWindow
-import subprocess
-import re
 import threading
 import time
+
+from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import Qt, QPoint, QMargins
+from PyQt5.QtGui import QPainter, QPen
+from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QComboBox, QStatusBar, \
+    QMainWindow
 
 import defs
 from dectect_mode import DetectModeService
 from keyborad_service import KeyboardService
 from mouse_service import MouseService
 from tcp_service import TcpServerService
-from window_info import window_info_init, is_admin, WindowInfo, info
+from window_info import get_window_info, update_window_info
+
 
 class MainWindow(QMainWindow):
 
@@ -28,7 +29,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusBar)
         self.setWindowTitle("android emulator control")
         self.move(
-            QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30,60)
+            QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30, 60)
         )
 
     def closeEvent(self, event):
@@ -98,7 +99,6 @@ class WinForm(QWidget):
         self.bt_stop_move.setFixedSize(self.cell_width, self.cell_high)
         self.bt_stop_move.clicked.connect(self.bt_stop_move_clicked)
         layout.addWidget(self.bt_stop_move, 3, 0, 1, 1, QtCore.Qt.AlignCenter)
-
 
         self.bt_start_coyote = QPushButton("coyote", self)
         self.bt_start_coyote.setFixedSize(self.cell_width, self.cell_high)
@@ -201,6 +201,7 @@ class WinForm(QWidget):
             'shell am start -n com.tencent.tmgp.cod/com.tencent.tmgp.cod.CODMainActivity'
         ]
         self.run_script(script)
+
     def run_script(self, script):
         device_name = self.combobox_devices.currentText()
         cmd = "adb -s " + device_name + " "
@@ -212,7 +213,7 @@ class WinForm(QWidget):
             print(out.decode())
 
     def bt_stop_move_clicked(self):
-        if (MouseService.stop_move == 0):
+        if MouseService.stop_move == 0:
             MouseService.stop_move = 1
         else:
             MouseService.stop_move = 0
@@ -226,6 +227,7 @@ class WinForm(QWidget):
             self.transparent_window.show()
         else:
             self.transparent_window.hide()
+
 
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
@@ -250,33 +252,38 @@ def find_main_window():
     return None
 
 
+def is_admin():
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
+
+
 def main():
     if is_admin():
-        window_info_init()
+        update_window_info()
         TcpServerService('', defs.TCP_PORT).start()
         MouseService.start()
         KeyboardService.start()
         app = QtWidgets.QApplication(sys.argv)
         wf = WinForm()
-        #wf.bt_refresh_clicked()
+        wf.bt_refresh_clicked()
 
         wf.transparent_window = TransparentWindow()
         wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
         wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
         wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
 
-        # info.window_pos = [125, 94]
-        # info.window_size = [1032, 580]
-        print(info.window_pos, info.window_size)
-        wf.transparent_window.move(info.window_pos[0]-5, info.window_pos[1]-5)
-        wf.transparent_window.setFixedSize(info.window_size[0]+10, info.window_size[1]+10)
+        x, y, w, h = get_window_info()
+        wf.transparent_window.move(x - 5, y - 5)
+        wf.transparent_window.setFixedSize(w + 10, h + 10)
         # wf.transparent_window.show()
 
         mw = MainWindow()
         mw.setCentralWidget(wf)
         mw.show()
         MouseService.set_statusbar(MainWindow.sss)
-        #wf.setStatusTip("pos:" + str(info.window_pos))
+        # wf.setStatusTip("pos:" + str(info.window_pos))
         DetectModeService().start()
 
         sys.exit(app.exec_())

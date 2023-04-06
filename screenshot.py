@@ -102,7 +102,7 @@ def test3(name):
     print("Image matching Error between the two images:", error)
 
 
-def test4(name):
+def detect_circle(name):
     image = cv2.imread(name)
     output = image.copy()
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -224,7 +224,7 @@ def test6():
         i = get_match_item(circles, M)
         print('is', i)
     else:
-        circles = detect_boate()
+        circles = detect_boat()
         if len(circles) == 1 and similar_point(circles[0], boat):
             i = 0
             print('boat')
@@ -570,11 +570,14 @@ def select_and_sift_match(key_code, id, name, min_radius, max_radius):
             if found:
                 print(name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
-def detect_rectangle():
-    img = cv2.imread('d:/Untitled.png')
+def detect_rectangle(name):
+    img = cv2.imread(name)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    ret, thresh = cv2.threshold(gray, 50, 255, 0)
+    #ret, thresh = cv2.threshold(gray, 50, 100, 0)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+                               cv2.THRESH_BINARY, 11, 2)
+
     cv2.imshow('image', thresh)
     cv2.waitKey()
     contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
@@ -589,7 +592,7 @@ def detect_rectangle():
             x, y, w, h = cv2.boundingRect(cnt)
             if w >20:
                 img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
-                print(w,h)
+                print(x,y,w,h)
 
     cv2.imshow('image',img)
     cv2.waitKey()
@@ -767,9 +770,9 @@ def mod_png():
    cv2.waitKey()
    cv2.destroyAllWindows()
 def cut_image():
-    img = cv2.imread('3/none.png')
+    img = cv2.imread('6/replace.png')
     crop = img[0:720, 0:1280]
-    cv2.imwrite('3/crop_none.png', crop)
+    cv2.imwrite('6/crop_replace.png', crop)
 def find_homo():
     import numpy as np
     import cv2 as cv
@@ -833,14 +836,23 @@ def create_pannel_csv():
     select_and_sift_match(33, 6, 'print_vehicle',  20, 35)
     select_and_sift_match(33, 7, 'update_chip',  20, 35)
     select_and_sift_match(33, 8, 'select_weapon',  36, 40)
+    select_and_sift_match(33, 9, 'para', 36, 50)
     select_and_sift_match(34, 0, 'drive_by',  40, 44)
     select_and_sift_match(58, 0, 'ex_seat',  32, 36)
 
-find_homo()
+if __name__ == '__main__':
+#detect_rectangle('6/drive_1.png')
+#find_homo()
 
 #detect_rectangle()
 #cut_image()
-#test4('3/boat.png')
+    f='para.png'
+    img = cv2.imread('3/' + f)
+    resized = cv2.resize(img, (1213, 682), interpolation=cv2.INTER_LINEAR)
+    img2 = numpy.zeros((720, 1280, 3), numpy.uint8)
+    img2[38:720, 32:1245] = resized
+    cv2.imwrite('5/' + f, img2)
+#detect_circle('3/coyote.png')
 #test4('moto.png')
 #sift_match()
 #find_homo()

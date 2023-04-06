@@ -55,21 +55,22 @@ def calc_chksum(data, length):
     return ~s & 0xffff
 
 
-class EventType():
+class EventType:
     TYPE_KEYBOARD = 0x0
     TYPE_MOUSE_AXIS = 0x1
     TYPE_MOUSE_BUTTON = 0x2
     TYPE_MOUSE_WHEEL = 0x3
     TYPE_CONTROL = 0x4
     TYPE_ALT_LOCATION = 0x5
+    TYPE_SETTING = 0x6
 
 
-class KeyEvent():
+class KeyEvent:
     KEY_UP = 0
     KEY_DOWN = 1
 
 
-class ButtonType():
+class ButtonType:
     LEFT = 0
     RIGHT = 1
     MIDDLE = 2
@@ -77,40 +78,44 @@ class ButtonType():
     FORWARD = 4
 
 
-class WheelEvent():
+class WheelEvent:
     ROLL_BACK = 0
     ROLL_FORWARD = 1
 
-class ControlEvent():
+class ControlEvent:
     MAIN_MODE = 0
     SUB_MODE = 1
     MAP_MODE = 2
     TRANSPARENT_MODE = 3
 
-class MainModeType():
-    MULTI_PLAYER = 0;
-    BATTLE_GROUND = 1;
-    PVE = 2;
-class SubModeType():
+class MainModeType:
+    MULTI_PLAYER = 0
+    BATTLE_GROUND = 1
+    PVE = 2
+class SubModeType:
     NONE_SUB_MODE = 0
     SUB_MODE_OFFSET = 1
     DRIVE_MOTO = 1
     DRIVE_CHOPPER = 2
     DRIVE_COYOTE = 3
-class MapModeStatus ():
+class MapModeStatus:
     MAP_MODE_OFF = 0
     MAP_MODE_ON = 1
 
-class TransPointStatus():
+class TransPointStatus:
     TRANSPARENT_OFF = 0
     TRANSPARENT_ON = 1
 
-class LocationType():
+class LocationType:
     SUPPLY_LIST = 0
     ALTER_PANEL = 1
 
-class SupplyType():
+class SupplyType:
     SUPPLY_NONE = 0
     SUPPLY_RANDOM = 1
     SUPPLY_SYSTEM = 2
     SUPPLY_CUSTOM = 3
+
+class SettingType:
+    WINDOW_POS = 0
+    WINDOW_SIZE = 1

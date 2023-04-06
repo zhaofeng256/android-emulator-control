@@ -1,20 +1,101 @@
-import ctypes, sys
+import ctypes
+import threading
 
-import win32gui, win32com.client
-from pywinauto import keyboard
+import win32gui
 from win32con import SW_SHOWNOACTIVATE
 
+import tcp_service
+from defs import TcpData, set_param1, EventType, SettingType, OFFSET_PARAM_1
 
-def callback(hwnd, extra):
+
+class WindowInfo:
+    window_size = [1280, 720]
+    window_pos = [0, 0]
+    main_title = '腾讯手游助手(64位)'
+    sub_title = 'sub'
+    main_hwnd = 0
+    emulator_resolution = [1280, 720]
+    condition = threading.Condition()
+    lock = threading.Lock()
+
+
+def main_callback(hwnd, extra):
+    title = win32gui.GetWindowText(hwnd)
+    if title == extra.main_title:
+        # print(title)
+        with WindowInfo.lock:
+            WindowInfo.main_hwnd = hwnd
+        # with extra.condition:
+        #     extra.condition.notify_all()
+    return 1
+
+
+def sub_callback(hwnd, extra):
     rect = win32gui.GetWindowRect(hwnd)
     title = win32gui.GetWindowText(hwnd)
     # if len(title) > 0:
-    #     print(title)
-    if title == extra.window_title:
-        print(title)
-        extra.window_pos = rect[0], rect[1]
-        extra.window_size = rect[2] - rect[0], rect[3] - rect[1]
-        extra.window_hwnd = hwnd
+    #     print("child" , title, rect)
+    if title == extra.sub_title:
+        with WindowInfo.lock:
+            WindowInfo.window_pos = rect[0], rect[1]
+            WindowInfo.window_size = rect[2] - rect[0] + 1, rect[3] - rect[1] + 1
+        # with extra.condition:
+        #     extra.condition.notify_all()
+    return 1
+
+
+def get_window_pos_size():
+
+    win32gui.EnumWindows(main_callback, WindowInfo)
+
+    with WindowInfo.lock:
+        hwnd = WindowInfo.main_hwnd
+
+    win32gui.EnumChildWindows(hwnd, sub_callback, WindowInfo)
+
+
+
+def update_window_info():
+    get_window_pos_size()
+    with WindowInfo.lock:
+        left = WindowInfo.window_pos[0]
+        hwnd = WindowInfo.main_hwnd
+
+    # show window if it is minimized
+    if left < 0:
+        win32gui.ShowWindow(hwnd, SW_SHOWNOACTIVATE)
+        get_window_pos_size()
+
+
+def get_window_info():
+    with WindowInfo.lock:
+        window_pos = WindowInfo.window_pos
+        window_size = WindowInfo.window_size
+    print('window pos:', window_pos, 'size', window_size)
+    return window_pos[0], window_pos[1], window_size[0], window_size[1]
+
+
+def send_window_info():
+    with WindowInfo.lock:
+        window_pos = WindowInfo.window_pos
+        window_size = WindowInfo.window_size
+
+    data = TcpData()
+    # send window position
+    data.type = EventType.TYPE_SETTING
+    set_param1(data, SettingType.WINDOW_POS)
+    a = ctypes.c_int16(window_pos[0])
+    b = ctypes.c_int16(window_pos[1])
+    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1), ctypes.byref(a), 2)
+    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1 + 2), ctypes.byref(b), 2)
+    tcp_service.tcp_data_append(data)
+    # send window size
+    set_param1(data, SettingType.WINDOW_SIZE)
+    a = ctypes.c_int16(window_size[0])
+    b = ctypes.c_int16(window_size[1])
+    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1), ctypes.byref(a), 2)
+    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1 + 2), ctypes.byref(b), 2)
+    tcp_service.tcp_data_append(data)
 
 
 def get_screen_resolution():
@@ -22,70 +103,34 @@ def get_screen_resolution():
     return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
 
-class WindowInfo():
-    def __init__(self):
-        self.emulator_resolution = [0, 0]
-        self.window_hwnd = 0
-        self.window_size = [1280, 720]
-        self.window_pos = [0, 0]
-        self.window_title = ''
-
-    def get_window_pos_size(self, title):
-        self.window_title = title
-        win32gui.EnumWindows(callback, self)
-
-    def get_window_pos(self):
-        return self.window_pos
-
-    def get_window_size(self):
-        return self.window_size
-
-    def get_emulator_resolution(self):
-        self.emulator_resolution = [1280, 720]
-        return self.emulator_resolution
+def move_window(x1, y1, x2, y2):
+    with WindowInfo.lock:
+        main_hwnd = WindowInfo.main_hwnd
+    ctypes.windll.user32.MoveWindow(main_hwnd, x1, y1, x2, y2, True)
 
 
-    def get_relative_position(self, x, y):
-        return round(self.emulator_resolution[0] * (x - self.window_pos[0]) / self.window_size[0]), \
-            round(self.emulator_resolution[1] * (y - self.window_pos[1]) / self.window_size[1])
+def get_emulator_resolution():
+    return 1280, 720
 
 
-def is_admin():
-    try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
+def get_relative_position(x, y):
+    with WindowInfo.lock:
+        emulator_resolution = WindowInfo.emulator_resolution
+        window_pos = WindowInfo.window_pos
+        window_size = WindowInfo.window_size
 
+    return round(emulator_resolution[0] * (x - window_pos[0]) / window_size[0]), \
+        round(emulator_resolution[1] * (y - window_pos[1]) / window_size[1])
 
 # shell = win32com.client.Dispatch("WScript.Shell")
 # shell.SendKeys('%')
 # win32gui.SetForegroundWindow(window_hwnd)
 # SW_SHOW, SW_NORMAL, SW_MAXIMIZE, SW_SHOWMINNOACTIVE, SW_FORCEMINIMIZE
-info = WindowInfo()
-def window_info_init():
-    global info
-    info.get_window_pos_size('腾讯手游助手(64位)')
 
-    if info.window_pos[0] == -4:
-        # full screen
-        # keyboard.press('f11');
-        print('fail to get window size')
-        window_pos = 0, 0
-        window_size = get_screen_resolution()
-    elif info.window_pos[0] < 0:
-        # minimized
-        print('window pos:', info.window_pos, 'size', info.window_size, info.window_hwnd)
-        win32gui.ShowWindow(info.window_hwnd, SW_SHOWNOACTIVATE)
-        info.get_window_pos_size('腾讯手游助手(64位)')
 
-    print('window pos:', info.window_pos, 'size', info.window_size, info.window_hwnd)
-    emulator_resolution = info.get_emulator_resolution()
-    return info
+def main():
+    get_window_info()
 
-# def main():
-#     x, y = get_relative_position(1000, 500)
-#     print(x, y)
-#
-#
-# if __name__ == '__main__':
-#     main()
+
+if __name__ == '__main__':
+    main()

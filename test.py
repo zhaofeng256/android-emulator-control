@@ -1,5 +1,8 @@
 import math
 
+import numpy
+
+
 def test():
     bs = [0x10, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xed, 0xff]
     s = 0
@@ -58,11 +61,19 @@ def select_props(i):
     y = 627 - radius * math.sin(1.5*math.pi - (i+1) * 2*math.pi / 7)
     print(821, ",", 627,  ",",round(x), ",", round(y))
 
+def select_mark(i):
+    radius = 10
+    x = 1110 + radius * math.cos(1.5*math.pi + i * 2*math.pi / 4)
+    y = 228 - radius * math.sin(1.5*math.pi + i * 2*math.pi / 4)
+    print(1110, ",", 228,  ",",round(x), ",", round(y))
+
 def test2():
     for i in range(6):
         select_props(i)
     for i in range(3):
         select_armor(i)
+    for i in range(4):
+        select_mark(i)
 class BBB():
     b = 1
     def test(self):
@@ -174,3 +185,24 @@ a[0] = True
 print(a, b)
 bak_f_x, bak_f_y = 0, 0
 print(bak_f_x, bak_f_y)
+
+test2()
+a=numpy.array([1,2,3])
+b=(1,1,2)
+print(a+1)
+
+class M:
+    m =123
+print(M.m)
+
+g = 1
+def change_g():
+    global g
+    g = 3
+
+
+print(g)
+change_g()
+print(g)
+
+

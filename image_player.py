@@ -4,9 +4,9 @@ import time
 
 import cv2
 import keyboard
-
+folder='6'
 idx = 0
-lst_pic = os.listdir('5')
+lst_pic = os.listdir(folder)
 t = len(lst_pic)
 exit_app = False
 c = threading.Condition()
@@ -40,8 +40,8 @@ def key_event_callback(evt):
 
 
 def show_full_screen(name):  #
-    print(name)
-    image = cv2.imread('5/' + name)
+    global folder
+    image = cv2.imread(folder+'/'+name)
     cv2.namedWindow('image', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow('image', image)
