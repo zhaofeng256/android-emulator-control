@@ -53,7 +53,7 @@ def detect_drive_mode(img):
     dc = {SubModeType.NONE_SUB_MODE: 'none', SubModeType.DRIVE_MOTO: 'moto',
           SubModeType.DRIVE_CHOPPER: 'chopper', SubModeType.DRIVE_COYOTE: 'coyote'}
 
-    crop = img[round(cnvt_x(350)):wd_high, round(cnvt_x(870)):wd_width]
+    crop = img[round(cnvt_x(350)):DetectModeService.wd_height, round(cnvt_x(870)):DetectModeService.wd_width]
     blurred = cv2.GaussianBlur(crop, (5, 5), 0)
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
                                param1=60, param2=40, minRadius=int(cnvt_x(38)), maxRadius=int(cnvt_x(45)))
@@ -207,23 +207,11 @@ def detect_supply_box(img):
 
     return supply_type, lst
 
-def detect_main_mode(gray):
-
-    left, top, right, bottom = [int(i) for i in cnvt_rect(12, 2, 173, 40)]
-    target_width, target_high = cnvt_size(154, 32)
-    crop = gray[top:bottom, left:right]
-    thresh = cv2.adaptiveThreshold(crop, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
-                               cv2.THRESH_BINARY, 11, 2)
-    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
-
+def detect_main_mode(img):
     main_mode = -1
-    for cnt in contours:
-        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
-        if len(approx) == 4:
-            x, y, w, h = cv2.boundingRect(cnt)
-            if abs(target_width - w) <= 3 and abs(target_high - h) <= 3:
-                main_mode = MainModeType.BATTLE_GROUND
-                break
+    found = detect_rectangle_contour(img, 0, 0, 175, 40, 155, 32)
+    if found:
+        main_mode = MainModeType.BATTLE_GROUND
     return main_mode
 
 
@@ -277,6 +265,101 @@ def detect_select_vehicle(img):
                 print('select_vehicle found at', (left + x, top + y))
                 a, b = ((left + x, top + y), (left + x + w, top + y + h))
                 break
+
+    return found, a, b
+
+
+def detect_rectangle_contour(origin, x1, y1, x2, y2, w, h):
+    left, top, right, bottom = [int(i) for i in cnvt_rect(x1, y1, x2, y2)]
+    target_width, target_high = cnvt_size(w, h)
+
+    img = cv2.cvtColor(np.array(origin), cv2.COLOR_RGB2BGR)
+    img = img[top:bottom, left:right]
+
+    kernel = np.ones((3, 3), np.uint8)
+    erosion = cv2.erode(img, kernel, iterations=1)
+    gray = cv2.cvtColor(erosion, cv2.COLOR_BGR2GRAY)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+                                   cv2.THRESH_BINARY_INV, 11, 2)
+
+    kernel = np.ones((2, 2), np.uint8)
+    closing = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    # img_rsz = cv2.resize(closing, (800, 400))
+    # cv2.imshow('closing', img_rsz)
+    # cv2.waitKey(100)
+
+    contours, hierarchy = cv2.findContours(closing, 1, cv2.CHAIN_APPROX_SIMPLE)
+
+    found = False
+    a, b = (0, 0), (0, 0)
+    for cnt in contours:
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if abs(target_width - w) <= 3 and abs(target_high - h) <= 3:
+                found = True
+                a, b = ((left + x, top + y), (left + x + w, top + y + h))
+                # print('rectangle found at', (left + x, top + y))
+                break
+
+    return found, a, b
+
+
+def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
+    left, top, right, bottom = [int(i) for i in cnvt_rect(x1, y1, x2, y2)]
+    target_width, target_high = cnvt_size(w, h)
+
+    img = cv2.cvtColor(np.array(origin), cv2.COLOR_RGB2BGR)
+    img = img[top:bottom, left:right]
+    mask = np.zeros(img.shape[:2], np.uint8)
+
+    bgd_model = np.zeros((1, 65), np.float64)
+    fgd_model = np.zeros((1, 65), np.float64)
+
+    rect = (1, 1, img.shape[1] - 1, img.shape[0] - 1)
+
+    cv2.grabCut(img, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+    mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    img = img * mask2[:, :, np.newaxis]
+
+    #img_rsz = cv2.resize(img, (800, 400))
+    # cv2.imshow('grab_cut', img_rsz)
+    # cv2.waitKey(100)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # img_rsz = cv2.resize(gray, (800, 400))
+    # cv2.imshow('gray', img_rsz)
+    # cv2.waitKey(100)
+
+    kernel = np.ones((6, 6), np.uint8)
+    closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+    # img_rsz = cv2.resize(closing, (800, 400))
+    # cv2.imshow('closing', img_rsz)
+    # cv2.waitKey(100)
+
+    thresh = cv2.adaptiveThreshold(closing, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+                                   cv2.THRESH_BINARY, 11, 2)
+
+    # img_rsz = cv2.resize(thresh, (800, 400))
+    # cv2.imshow('thresh', img_rsz)
+    # cv2.waitKey(100)
+
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+
+    found = False
+    a, b = (0, 0), (0, 0)
+    for cnt in contours:
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if abs(target_width - w) <= 3 and abs(target_high - h) <= 3:
+                found = True
+                a, b = ((left + x, top + y), (left + x + w, top + y + h))
+                # print('rectangle found at', (left + x, top + y))
+                break
+
+
+    # cv2.waitKey()
 
     return found, a, b
 
@@ -337,8 +420,10 @@ class DetectModeService:
     bak_lst_s = [(0, 0, 0, 0) for i in range(6)]
     bak_sel_vel = False
 
-    f_found = [False]*3
-    bak_f_found = [False]*3
+    bak_armor_off = False
+
+    f_found = [False]*4
+    bak_f_found = [False]*4
 
     bak_main_mode = -1
     # 32 38 1213 682
@@ -380,7 +465,7 @@ class DetectModeService:
             gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
 
             # check main made
-            v_mode = detect_main_mode(gray)
+            v_mode = detect_main_mode(img)
             if v_mode != -1:
                 if v_mode != DetectModeService.bak_main_mode:
                     DetectModeService.bak_main_mode = v_mode
@@ -514,7 +599,8 @@ class DetectModeService:
                     DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
 
                 # 4. find select vehicle
-                found, a, b = detect_select_vehicle(gray)
+                #found, a, b = detect_select_vehicle(gray)
+                found, a, b = detect_rectangle_grabcut(img, 536, 524, 736, 560, 193, 31);
 
                 DetectModeService.f_found[2] = found
 
@@ -538,13 +624,33 @@ class DetectModeService:
                         send_supply_position(LocationType.ALTER_PANEL, 16, (0,0))
                         send_supply_position(LocationType.ALTER_PANEL, 18, (0,0))
 
+
+                # 5. find armor off
+                found, a, b = detect_rectangle_grabcut(img, 580, 460, 710, 520, 96, 35)
+                DetectModeService.f_found[3] = found
+
+                if found != DetectModeService.bak_armor_off:
+                    DetectModeService.bak_armor_off = found
+                    if found:
+                        x = round((a[0]+b[0])/2)
+                        y = round((a[1]+b[1])/2)
+
+                        print('armor off FOUND')
+                        send_supply_position(LocationType.ALTER_PANEL, 33, (x, y))
+                        if DetectModeService.show_img:
+                            cv2.rectangle(2, a, b, (0, 255, 0), 2)
+                            cv2.putText(img2, 'F', cnvt_pos((x,y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                        (0, 0, 255), 2)
+                    else:
+                        print('armor off NOT found')
+
                 #  every F panel disappeared
                 if DetectModeService.f_found != DetectModeService.bak_f_found:
                     DetectModeService.bak_f_found = DetectModeService.f_found
-                    if DetectModeService.f_found == [False]*3:
+                    if DetectModeService.f_found == [False]*4:
                         send_supply_position(LocationType.ALTER_PANEL, 33, (0, 0))
 
-                # 5. find exchange seat
+                # 6. find exchange seat
                 j, g_x ,g_y = 0,0,0
                 found = False
                 for i in range(n):

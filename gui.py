@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 
+import mouse
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import Qt, QPoint, QMargins
 from PyQt5.QtGui import QPainter, QPen
@@ -33,6 +34,7 @@ class MainWindow(QMainWindow):
         )
 
     def closeEvent(self, event):
+        mouse.unhook_all()
         self.centralWidget().transparent_window.close()
         event.accept()
 

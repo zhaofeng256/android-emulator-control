@@ -4,7 +4,7 @@ import time
 
 import cv2
 import keyboard
-folder='6'
+folder='3'
 idx = 0
 lst_pic = os.listdir(folder)
 t = len(lst_pic)
@@ -39,9 +39,9 @@ def key_event_callback(evt):
             exit_app = True
 
 
-def show_full_screen(name):  #
+def show_full_screen(file_name):  #
     global folder
-    image = cv2.imread(folder+'/'+name)
+    image = cv2.imread(folder +'/' + file_name)
     cv2.namedWindow('image', cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty('image', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
     cv2.imshow('image', image)
@@ -58,7 +58,7 @@ if __name__ == '__main__':
             name = lst_pic[idx % t]
         if name == bak_name:
             continue
-        print(idx)
+        print(idx, name)
         show_full_screen(name)
 
 # lst_pic = ['print_vehicle.png','select_vehicle.png','select_weapon.png',

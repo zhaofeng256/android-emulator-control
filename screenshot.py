@@ -593,14 +593,47 @@ def fake():
     # rect = (0, 5, 173, 41)
 
 
-def detect_rectangle(name):
+def detect_rectangle(name, x, y, w, h):
     img = cv2.imread(name)
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # ret, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
-    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
-                                   cv2.THRESH_BINARY, 11, 2)
+    img = img[y:y+h, x:x+w]
 
-    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+    # median = cv2.medianBlur(img, 15)
+    # img_rsz = cv2.resize(median, (800, 400))
+    # cv2.imshow('median', img_rsz)
+    # cv2.waitKey(100)
+
+    kernel = np.ones((3, 3), np.uint8)
+    erosion = cv2.erode(img, kernel, iterations=1)
+    img_rsz = cv2.resize(erosion, (800, 400))
+    cv2.imshow('erosion', img_rsz)
+    cv2.waitKey(100)
+
+    # dilation = cv2.dilate(img, kernel, iterations=1)
+    # img_rsz = cv2.resize(dilation, (800, 400))
+    # cv2.imshow('dilation', img_rsz)
+    # cv2.waitKey(100)
+
+
+    gray = cv2.cvtColor(erosion, cv2.COLOR_BGR2GRAY)
+    img_rsz = cv2.resize(gray, (800, 400))
+    cv2.imshow('gray', img_rsz)
+    cv2.waitKey(100)
+
+    # ret, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+                                   cv2.THRESH_BINARY_INV, 11, 2)
+
+    img_rsz = cv2.resize(thresh, (800, 400))
+    cv2.imshow('thresh', img_rsz)
+    cv2.waitKey(100)
+
+    kernel = np.ones((2, 2), np.uint8)
+    closing = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
+    img_rsz = cv2.resize(closing, (800, 400))
+    cv2.imshow('closing', img_rsz)
+    cv2.waitKey(100)
+
+    contours, hierarchy = cv2.findContours(closing, 1, cv2.CHAIN_APPROX_SIMPLE)
     print("Number of contours detected:", len(contours))
 
     for cnt in contours:
@@ -612,7 +645,8 @@ def detect_rectangle(name):
                 img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
                 print(x, y, w, h)
 
-    cv2.imshow('image', img)
+    img_rsz = cv2.resize(img, (800, 400))
+    cv2.imshow(name, img_rsz)
     cv2.waitKey()
     cv2.destroyAllWindows()
 
@@ -958,9 +992,14 @@ def ocr():
     cv2.destroyAllWindows()
 
 
+
 # sift_match('4/armor_off.png', '3/armor_off.png')
-# detect_rectangle('off.png')
-grab_cut('3/armor_off.png', 580, 460, 710,  520)
+
+# detect_rectangle('6/armor_off.png', 0, 0, 175, 40)
+# detect_rectangle('6/drive.png', 0, 0, 175, 40)
+# detect_rectangle('6/replace.png', 0, 0, 175, 40)
+# grab_cut('3/armor_off.png', 580, 460, 710,  520)
+grab_cut('3/select_vehicle.png',536, 524, 736, 560)
 # find_homo()
 # cut_image('3/', 'armor_off.png')
 
