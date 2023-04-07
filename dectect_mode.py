@@ -679,8 +679,13 @@ class DetectModeService:
                         mod, des = detect_drive_mode(gray)
                         # print('time elapse', time.time() - s0)
 
-                        print("drive on", des)
-                        send_sub_mode(mod)
+                        if SubModeType.NONE_SUB_MODE == mod:
+                            # type not recognized
+                            DetectModeService.bak_ex_x = 0
+                            DetectModeService.bak_ex_y = 0
+                        else:
+                            print("drive on", des)
+                            send_sub_mode(mod)
                     else:
                         print("drive off")
                         send_sub_mode(SubModeType.NONE_SUB_MODE)
