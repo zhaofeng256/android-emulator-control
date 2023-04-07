@@ -13,7 +13,7 @@ import switch_mode
 import tcp_service
 from defs import TcpData, EventType, set_param1, set_param2, OFFSET_PARAM_1, OFFSET_PARAM_2, LocationType, ControlEvent, \
     SubModeType, SupplyType, MainModeType
-from window_info import WindowInfo, get_window_info, get_emulator_resolution
+from window_info import WindowInfo, get_window_info, get_terminal_size, update_window_info
 
 
 def similar_point(a, b):
@@ -342,8 +342,14 @@ class DetectModeService:
 
     bak_main_mode = -1
     # 32 38 1213 682
-    wd_left, wd_top, wd_width, wd_height = get_window_info()
-    mc_width, mc_height = get_emulator_resolution()
+    wd_left, wd_top, wd_width, wd_height = 0,0,1280,720
+    mc_width, mc_height = 1280,720
+    def __init__(self):
+        # 32 38 1213 682
+        DetectModeService.wd_left, DetectModeService.wd_top, \
+            DetectModeService.wd_width, DetectModeService.wd_height = get_window_info()
+        DetectModeService.mc_width, DetectModeService.mc_height = get_terminal_size()
+
     def detect_thread(self):
         axis = read_panel_axis()
         sift = cv2.SIFT_create()
@@ -368,7 +374,7 @@ class DetectModeService:
         n = len(axis)
         n_mode = 0
         while True:
-            r = [int(i) for i in cnvt_region(0, 0, mc_width, mc_height)]
+            r = [int(i) for i in cnvt_region(0, 0, DetectModeService.mc_width, DetectModeService.mc_height)]
             img = pyautogui.screenshot(region=r)
             img2 = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
             gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)

@@ -20,16 +20,25 @@ OFFSET_CHKSUM = 13
 
 
 def set_id(data, val):
-    memmove(byref(data, OFFSET_ID), byref((c_int32)(val)), 4)
+    memmove(byref(data, OFFSET_ID), byref(c_int32(val)), 4)
 
 
 def set_param1(data, val):
-    memmove(byref(data, OFFSET_PARAM_1), byref((c_int32)(val)), 4)
+    memmove(byref(data, OFFSET_PARAM_1), byref(c_int32(val)), 4)
 
 
 def set_param2(data, val):
-    memmove(byref(data, OFFSET_PARAM_2), byref((c_int32)(val)), 4)
+    memmove(byref(data, OFFSET_PARAM_2), byref(c_int32(val)), 4)
 
+def get_param1(data):
+    b = data[OFFSET_PARAM_1:OFFSET_PARAM_1+4]
+    val = int.from_bytes(b, "big")
+    return val
+
+def get_param2(data):
+    b = data[OFFSET_PARAM_2:OFFSET_PARAM_2+4]
+    val = int.from_bytes(b,"big")
+    return val
 
 def set_chksum(data):
     sz = sizeof(data)

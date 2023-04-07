@@ -110,15 +110,20 @@ def detect_circle(name):
     # Find circles
     circles = cv2.HoughCircles(blurred, cv2.HOUGH_GRADIENT, 1.26, minDist=80,
                                param1=60, param2=40, minRadius=33, maxRadius=47)
-                              # param1=60, param2=40, minRadius=38, maxRadius=45)
+    # param1=60, param2=40, minRadius=38, maxRadius=45)
     # If some circle is found
     if circles is not None:
         # Get the (x, y, r) as integers
         circles = np.round(circles[0, :]).astype("int")
-        print(circles)
+
         # loop over the circles
+        idx = 0
         for (x, y, r) in circles:
+            print(idx + 1, circles[idx])
+            idx += 1
             cv2.circle(output, (x, y), r, (0, 255, 0), 2)
+            cv2.putText(output, str(idx), (round(x), round(y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 255), 2)
     # show the output image
     cv2.imshow("circle", output)
     cv2.waitKey(0)
@@ -232,11 +237,11 @@ def test6():
 
 def test7():
     # img = cv2.imread('1/door.png')
-    img = cv2.imread('3/select_vehicle.png')#120
+    img = cv2.imread('3/select_vehicle.png')  # 120
     # img = cv2.imread('1/pickup.png')
     # img = cv2.imread('1/kongtou.png')
     # img = cv2.imread('1/kongtougreen.png')
-    #img = cv2.imread('1/redbox.png')
+    # img = cv2.imread('1/redbox.png')
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     ret, thresh = cv2.threshold(gray, 120, 255, 0)
@@ -339,16 +344,16 @@ def detect_tough_guy():
     return circles
 
 
-def sift_match():
+def sift_match(img1, img2):
     # import required libraries
     import cv2
 
     # read two input images as grayscale
-    img1 = cv2.imread('save.png', cv2.IMREAD_GRAYSCALE)
-    img2 = cv2.imread('3/print_vehicle_1.png', cv2.IMREAD_GRAYSCALE)
+    img1 = cv2.imread(img1, cv2.IMREAD_GRAYSCALE)
+    img2 = cv2.imread(img2, cv2.IMREAD_GRAYSCALE)
 
-    #ret, img1 = cv2.threshold(img1, 100, 255, 0)
-    #ret, img2 = cv2.threshold(img2, 160, 255, 0)
+    # ret, img1 = cv2.threshold(img1, 100, 255, 0)
+    # ret, img2 = cv2.threshold(img2, 160, 255, 0)
 
     # Initiate SIFT detector
     sift = cv2.SIFT_create()
@@ -370,7 +375,7 @@ def sift_match():
     out = cv2.drawMatches(img1, kp1, img2, kp2, matches[:10], None, flags=2)
     plt.imshow(out), plt.show()
 
-    for i in range(10):
+    for i in range(len(matches)):
         print(matches[i].distance)
 
     print(kp2[matches[0].trainIdx].pt)
@@ -380,9 +385,9 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
     # import required libraries
     show_img = False
     import cv2
-    img1 = cv2.imread('4/' + name + '.png',cv2.IMREAD_UNCHANGED)
+    img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_UNCHANGED)
     if show_img:
-        cv2.imshow('saved',img1)
+        cv2.imshow('saved', img1)
         cv2.waitKey(3)
     # read two input images as grayscale
     img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
@@ -400,7 +405,7 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
     # detect and compute the keypoints and descriptors with SIFT
     kp1, des1 = sift.detectAndCompute(img1, None)
     kp2, des2 = sift.detectAndCompute(crop, None)
-    print('keypoints',len(kp1),len(kp2))
+    print('keypoints', len(kp1), len(kp2))
     # create BFMatcher object
     bf = cv2.BFMatcher()
 
@@ -539,7 +544,7 @@ def detect_circle_panel(file_name, min_radius, max_radius, tag):
             print(idx, circles[idx - 1])
 
         # show the output image
-        cv2.imshow("select "+tag, output)
+        cv2.imshow("select " + tag, output)
         ret = cv2.waitKey(0)
         ret = int(ret - 0x30)
         cv2.destroyAllWindows()
@@ -547,13 +552,13 @@ def detect_circle_panel(file_name, min_radius, max_radius, tag):
         if ret > 0:
             return True, circles[ret - 1][0], circles[ret - 1][1], circles[ret - 1][2]
         else:
-            return False, 0 ,0 ,0
+            return False, 0, 0, 0
     else:
         return False, 0, 0, 0
 
 
 def select_and_sift_match(key_code, id, name, min_radius, max_radius):
-    file = '3/'+name+'.png'
+    file = '3/' + name + '.png'
     b, x, y, r = detect_circle_panel(file, min_radius, max_radius, name)
     if not b:
         return
@@ -570,39 +575,104 @@ def select_and_sift_match(key_code, id, name, min_radius, max_radius):
             if found:
                 print(name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
+
+def fake():
+    pass
+    # edges = cv2.Canny(gray,50,200)
+    # imS = cv2.resize(edges, (800, 400))
+    # cv2.imshow('edges', imS)
+    # cv2.waitKey(100)
+    # img = cv2.imread('off.png')
+    # img = cv2.imread('3/armor_off.png')
+    # img = cv2.imread('3/chopper.png')
+    # img = img[0:40,0:175]
+    # img = img[460:520,580:710]
+
+    # rect = (8, 13, 97, 37)
+    # rect = (580, 460, 120, 50)
+    # rect = (0, 5, 173, 41)
+
+
 def detect_rectangle(name):
     img = cv2.imread(name)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    #ret, thresh = cv2.threshold(gray, 50, 100, 0)
+    # ret, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY_INV)
     thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
-                               cv2.THRESH_BINARY, 11, 2)
+                                   cv2.THRESH_BINARY, 11, 2)
 
-    cv2.imshow('image', thresh)
-    cv2.waitKey()
     contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
     print("Number of contours detected:", len(contours))
 
-    lst = []
-    self_def = False
     for cnt in contours:
         x1, y1 = cnt[0][0]
         approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
         if len(approx) == 4:
             x, y, w, h = cv2.boundingRect(cnt)
-            if w >20:
+            if w > 10:
                 img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
-                print(x,y,w,h)
+                print(x, y, w, h)
 
-    cv2.imshow('image',img)
+    cv2.imshow('image', img)
     cv2.waitKey()
     cv2.destroyAllWindows()
+
+
+def grab_cut(name, left, top, right, bottom):
+    origin = cv2.imread(name)
+    img = origin[top:bottom, left:right]
+    mask = np.zeros(img.shape[:2], np.uint8)
+
+    bgd_model = np.zeros((1, 65), np.float64)
+    fgd_model = np.zeros((1, 65), np.float64)
+
+    rect = (1, 1, img.shape[1] - 1, img.shape[0] - 1)
+
+    cv2.grabCut(img, mask, rect, bgd_model, fgd_model, 5, cv2.GC_INIT_WITH_RECT)
+    mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    img = img * mask2[:, :, np.newaxis]
+
+    img_rsz = cv2.resize(img, (800, 400))
+    cv2.imshow('grab_cut', img_rsz)
+    cv2.waitKey(100)
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img_rsz = cv2.resize(gray, (800, 400))
+    cv2.imshow('gray', img_rsz)
+    cv2.waitKey(100)
+
+    kernel = np.ones((6, 6), np.uint8)
+    closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
+    img_rsz = cv2.resize(closing, (800, 400))
+    cv2.imshow('closing', img_rsz)
+    cv2.waitKey(100)
+
+    thresh = cv2.adaptiveThreshold(closing, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+                                   cv2.THRESH_BINARY, 11, 2)
+
+    img_rsz = cv2.resize(thresh, (800, 400))
+    cv2.imshow('thresh', img_rsz)
+    cv2.waitKey(100)
+
+    contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
+
+    for cnt in contours:
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 4:
+            x, y, w, h = cv2.boundingRect(cnt)
+            if w > 10:
+                img = cv2.drawContours(img, [cnt], -1, (0, 255, 0), 2)
+                print(x, y, w, h)
+
+    img_rsz = cv2.resize(img, (800, 400))
+    cv2.imshow('image', img_rsz)
+    cv2.waitKey()
+
 
 def detect_supply_box():
     # img = cv2.imread('1/selectcar.png')#120
     img = cv2.imread('3/custom_supply.png')
-    #img = cv2.imread('3/system_supply.png')
-    #img = cv2.imread('3/system_supply_1.png')
+    # img = cv2.imread('3/system_supply.png')
+    # img = cv2.imread('3/system_supply_1.png')
     left = 368
     right = 877
     top = 286
@@ -710,8 +780,8 @@ def test_dict():
 
     print(lst)
 
-def update_screen():
 
+def update_screen():
     t0 = time.time()
     while True:
         screenshot = ImageGrab.grab()
@@ -726,25 +796,28 @@ def update_screen():
         print("FPS: " + str(1 / (ex_time)))
         t0 = time.time()
 
+
 def folder_resize():
     lst = os.listdir('1')
     for name in lst:
         print(name)
         resize_image(name)
+
+
 def resize_image(name):
-    image = cv2.imread('1/'+name)
-    resized = cv2.resize(image, (1280,720), interpolation=cv2.INTER_LINEAR)
-    cv2.imwrite('3/'+name,resized)
+    image = cv2.imread('1/' + name)
+    resized = cv2.resize(image, (1280, 720), interpolation=cv2.INTER_LINEAR)
+    cv2.imwrite('3/' + name, resized)
 
 
 def save_screenshot(name):
-    #show_full_screen('1/'+name)
+    # show_full_screen('1/'+name)
     img2 = pyautogui.screenshot(region=(0, 0, 1280, 720))
-    img2.save('3/'+name)
+    img2.save('3/' + name)
 
 
 def byte_copy():
-    data = [ctypes.c_byte()]*4
+    data = [ctypes.c_byte()] * 4
     data[0] = 1
     data[1] = 2
     data[2] = 3
@@ -763,23 +836,28 @@ def byte_copy():
     memmove(byref(t, 2), byref(b), 2)
     print(t)
 
+
 def mod_png():
-   img = cv2.imread('save.png',cv2.IMREAD_GRAYSCALE)
-   ret, thresh = cv2.threshold(img, 120, 255, 0)
-   cv2.imshow('img', thresh)
-   cv2.waitKey()
-   cv2.destroyAllWindows()
-def cut_image():
-    img = cv2.imread('6/replace.png')
+    img = cv2.imread('save.png', cv2.IMREAD_GRAYSCALE)
+    ret, thresh = cv2.threshold(img, 120, 255, 0)
+    cv2.imshow('img', thresh)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+
+
+def cut_image(folder, name):
+    img = cv2.imread(folder + name)
     crop = img[0:720, 0:1280]
-    cv2.imwrite('6/crop_replace.png', crop)
+    cv2.imwrite(folder + 'crop_' + name, crop)
+
+
 def find_homo():
     import numpy as np
     import cv2 as cv
     from matplotlib import pyplot as plt
     MIN_MATCH_COUNT = 10
     img1 = cv.imread('4/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # queryImage
-    #img1 = cv.imread('4/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # queryImage
+    # img1 = cv.imread('4/print_vehicle.png', cv.IMREAD_GRAYSCALE)  # queryImage
     img2 = cv.imread('3/print_vehicle_1.png', cv.IMREAD_GRAYSCALE)  # trainImage
     # Initiate SIFT detector
     sift = cv.SIFT_create()
@@ -796,77 +874,111 @@ def find_homo():
     for m, n in matches:
         if m.distance < 0.7 * n.distance:
             good.append(m)
-    print('good:', len(good), len(kp1), len(kp2), len(matches), len(good)/len(matches))
-    if len(good)>MIN_MATCH_COUNT:
-        src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
-        dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
-        M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
+    print('good:', len(good), len(kp1), len(kp2), len(matches), len(good) / len(matches))
+    if len(good) > MIN_MATCH_COUNT:
+        src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+        M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC, 5.0)
         matchesMask = mask.ravel().tolist()
-        h,w = img1.shape
-        pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-        dst = cv.perspectiveTransform(pts,M)
-        img2 = cv.polylines(img2,[np.int32(dst)],True,255,3, cv.LINE_AA)
+        h, w = img1.shape
+        pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+        dst = cv.perspectiveTransform(pts, M)
+        img2 = cv.polylines(img2, [np.int32(dst)], True, 255, 3, cv.LINE_AA)
     else:
-        print( "Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT) )
+        print("Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT))
         matchesMask = None
 
-    draw_params = dict(matchColor = (0,255,0), # draw matches in green color
-                       singlePointColor = None,
-                       matchesMask = matchesMask, # draw only inliers
-                       flags = 2)
-    img3 = cv.drawMatches(img1,kp1,img2,kp2,good,None,**draw_params)
-    plt.imshow(img3, 'gray'),plt.show()
+    draw_params = dict(matchColor=(0, 255, 0),  # draw matches in green color
+                       singlePointColor=None,
+                       matchesMask=matchesMask,  # draw only inliers
+                       flags=2)
+    img3 = cv.drawMatches(img1, kp1, img2, kp2, good, None, **draw_params)
+    plt.imshow(img3, 'gray'), plt.show()
 
-def paste_image():
+
+def paste_image_folder():
     files = os.listdir('3')
     for f in files:
-        img = cv2.imread('3/'+f)
+        img = cv2.imread('3/' + f)
         resized = cv2.resize(img, (1213, 682), interpolation=cv2.INTER_LINEAR)
-        img2 = numpy.zeros((720,1280,3), numpy.uint8)
-        img2[38:720,32:1245] = resized
-        cv2.imwrite('5/'+f, img2)
+        img2 = numpy.zeros((720, 1280, 3), numpy.uint8)
+        img2[38:720, 32:1245] = resized
+        cv2.imwrite('5/' + f, img2)
 
-def create_pannel_csv():
-    select_and_sift_match(33, 0, 'take_drive',  40, 44)
-    select_and_sift_match(33, 1, 'door',  25, 29)
-    select_and_sift_match(33, 2, 'strop_on',  35, 39)
-    select_and_sift_match(33, 3, 'strop_off',  35, 39)
-    select_and_sift_match(33, 4, 'tough_on',  35, 39)
-    select_and_sift_match(33, 5, 'tough_off',  35, 39)
-    select_and_sift_match(33, 6, 'print_vehicle',  20, 35)
-    select_and_sift_match(33, 7, 'update_chip',  20, 35)
-    select_and_sift_match(33, 8, 'select_weapon',  36, 40)
-    select_and_sift_match(33, 9, 'para', 36, 50)
-    select_and_sift_match(34, 0, 'drive_by',  40, 44)
-    select_and_sift_match(58, 0, 'ex_seat',  32, 36)
 
-if __name__ == '__main__':
-#detect_rectangle('6/drive_1.png')
-#find_homo()
-
-#detect_rectangle()
-#cut_image()
-    f='para.png'
+def paste_image_file(f):
     img = cv2.imread('3/' + f)
     resized = cv2.resize(img, (1213, 682), interpolation=cv2.INTER_LINEAR)
     img2 = numpy.zeros((720, 1280, 3), numpy.uint8)
     img2[38:720, 32:1245] = resized
     cv2.imwrite('5/' + f, img2)
-#detect_circle('3/coyote.png')
-#test4('moto.png')
-#sift_match()
-#find_homo()
 
-#byte_copy()
-#folder_resize()
-#resize_image('redbox.png')
-#update_screen()
+
+def create_pannel_csv():
+    select_and_sift_match(33, 0, 'take_drive', 40, 44)
+    select_and_sift_match(33, 1, 'door', 25, 29)
+    select_and_sift_match(33, 2, 'strop_on', 35, 39)
+    select_and_sift_match(33, 3, 'strop_off', 35, 39)
+    select_and_sift_match(33, 4, 'tough_on', 35, 39)
+    select_and_sift_match(33, 5, 'tough_off', 35, 39)
+    select_and_sift_match(33, 6, 'print_vehicle', 20, 35)
+    select_and_sift_match(33, 7, 'update_chip', 20, 35)
+    select_and_sift_match(33, 8, 'select_weapon', 36, 40)
+    select_and_sift_match(33, 9, 'para', 36, 50)
+    select_and_sift_match(33, 10, 'hacker', 35, 39)
+    select_and_sift_match(34, 0, 'drive_by', 40, 44)
+    select_and_sift_match(58, 0, 'ex_seat', 32, 36)
+
+
+def ocr():
+    import pytesseract as tess
+    print(tess.get_tesseract_version())
+    print(tess.get_languages())
+
+    # image = cv2.imread("ocr.png")
+    image = cv2.imread('chinese.png')
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    ret, thresh = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
+    start = time.time()
+    # text = tess.image_to_string(image_rgb, lang="eng")
+    text = tess.image_to_string(thresh, lang="chi_sim")
+    print(time.time() - start, text)
+    content = text.replace("\f", "").split("\n")
+    for c in content:
+        if len(c) > 0:
+            print(c)
+    h, w, c = image.shape
+    boxes = tess.image_to_boxes(image)
+    for b in boxes.splitlines():
+        b = b.split(' ')
+        image = cv2.rectangle(image, (int(b[1]), h - int(b[2])), (int(b[3]), h - int(b[4])), (0, 255, 0), 2)
+
+    cv2.imshow('text detect', image)
+    cv2.waitKey(3)
+    cv2.destroyAllWindows()
+
+
+# sift_match('4/armor_off.png', '3/armor_off.png')
+# detect_rectangle('off.png')
+grab_cut('3/armor_off.png', 580, 460, 710,  520)
+# find_homo()
+# cut_image('3/', 'armor_off.png')
+
+# detect_circle('3/lean_out.png')
+# test4('moto.png')
+# sift_match()
+# find_homo()
+
+# byte_copy()
+# folder_resize()
+# resize_image('redbox.png')
+# update_screen()
 # detect_supply_box()
 # detect_random_supply()
-#test_dict()
+# test_dict()
 # sift_match_zone('1/redbox.png', 'suply', 392, 302, 430, 600)
 # sift_match_zone('1/redbox.png', 'suply', 392, 440, 430, 600)
-
+# if __name__ == '__main__':
 if __name__ == '__':
     test7()
     detect_door()

@@ -183,14 +183,16 @@ class WinForm(QWidget):
     def bt_point_position_clicked(self):
         script = [
             "shell settings put global development_settings_enabled 1",
-            "shell settings put system pointer_location 1"
+            "shell settings put system pointer_location 1",
+            "shell settings put system show_touches 1"
         ]
         self.run_script(script)
 
     def bt_not_point_clicked(self):
         script = [
             "shell settings put global development_settings_enabled 1",
-            "shell settings put system pointer_location 0"
+            "shell settings put system pointer_location 0",
+            "shell settings put system show_touches  0"
         ]
         self.run_script(script)
 
@@ -223,6 +225,11 @@ class WinForm(QWidget):
 
     def bt_transparent_board_clicked(self):
         self.show_transparent_window = not self.show_transparent_window
+
+        x, y, w, h = get_window_info()
+        self.transparent_window.move(x - 5, y - 5)
+        self.transparent_window.setFixedSize(w + 10, h + 10)
+
         if self.show_transparent_window:
             self.transparent_window.show()
         else:
@@ -261,10 +268,7 @@ def is_admin():
 
 def main():
     if is_admin():
-        update_window_info()
-        TcpServerService('', defs.TCP_PORT).start()
-        MouseService.start()
-        KeyboardService.start()
+
         app = QtWidgets.QApplication(sys.argv)
         wf = WinForm()
         wf.bt_refresh_clicked()
@@ -274,6 +278,7 @@ def main():
         wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
         wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
 
+        update_window_info()
         x, y, w, h = get_window_info()
         wf.transparent_window.move(x - 5, y - 5)
         wf.transparent_window.setFixedSize(w + 10, h + 10)
@@ -281,10 +286,14 @@ def main():
 
         mw = MainWindow()
         mw.setCentralWidget(wf)
-        mw.show()
-        MouseService.set_statusbar(MainWindow.sss)
-        # wf.setStatusTip("pos:" + str(info.window_pos))
+
+        TcpServerService('', defs.TCP_PORT).start()
+        MouseService.set_statusbar(mw.sss)        # wf.setStatusTip("pos:" + str(info.window_pos))
+        MouseService.start()
+        KeyboardService.start()
         DetectModeService().start()
+
+        mw.show()
 
         sys.exit(app.exec_())
 

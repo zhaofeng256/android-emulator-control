@@ -1,11 +1,7 @@
 import socket
-import struct
 import threading
-from os import error
-from ctypes import sizeof
-import binascii
 
-from window_info import send_window_info
+from window_info import send_window_info, set_terminal_size
 
 tcp_data_list = []
 tcp_list_cv = threading.Condition()
@@ -63,6 +59,14 @@ class TcpServerService(object):
             client_connected = True
             tcp_data_list.clear()
             send_window_info() # tell emulator its position and size
+
+            recv_data = client.recv(32)
+            if recv_data:
+                # char_array = ctypes.c_char * len(recv_data)
+                width = get_param1(recv_data)
+                height = get_param2(recv_data)
+                set_terminal_size(width, height)
+
             snd = threading.Thread(target=self.thread_send, args=(client, addr))
             snd.daemon = True
             snd.start()

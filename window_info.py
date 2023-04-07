@@ -14,7 +14,7 @@ class WindowInfo:
     main_title = '腾讯手游助手(64位)'
     sub_title = 'sub'
     main_hwnd = 0
-    emulator_resolution = [1280, 720]
+    terminal_size = [1280, 720]
     condition = threading.Condition()
     lock = threading.Lock()
 
@@ -39,6 +39,7 @@ def sub_callback(hwnd, extra):
         with WindowInfo.lock:
             WindowInfo.window_pos = rect[0], rect[1]
             WindowInfo.window_size = rect[2] - rect[0] + 1, rect[3] - rect[1] + 1
+            print('window pos:', WindowInfo.window_pos, 'size', WindowInfo.window_size)
         # with extra.condition:
         #     extra.condition.notify_all()
     return 1
@@ -71,7 +72,7 @@ def get_window_info():
     with WindowInfo.lock:
         window_pos = WindowInfo.window_pos
         window_size = WindowInfo.window_size
-    print('window pos:', window_pos, 'size', window_size)
+
     return window_pos[0], window_pos[1], window_size[0], window_size[1]
 
 
@@ -109,13 +110,23 @@ def move_window(x1, y1, x2, y2):
     ctypes.windll.user32.MoveWindow(main_hwnd, x1, y1, x2, y2, True)
 
 
-def get_emulator_resolution():
-    return 1280, 720
+def get_terminal_size():
+    with WindowInfo.lock:
+        width = WindowInfo.terminal_size[0]
+        height = WindowInfo.terminal_size[1]
+    return width, height
+
+
+def set_terminal_size(width, height):
+    with WindowInfo.lock:
+        WindowInfo.terminal_size[0] = width
+        WindowInfo.terminal_size[1] = height
+        print("terminal size",(width, height))
 
 
 def get_relative_position(x, y):
     with WindowInfo.lock:
-        emulator_resolution = WindowInfo.emulator_resolution
+        emulator_resolution = WindowInfo.terminal_size
         window_pos = WindowInfo.window_pos
         window_size = WindowInfo.window_size
 
@@ -128,9 +139,10 @@ def get_relative_position(x, y):
 # SW_SHOW, SW_NORMAL, SW_MAXIMIZE, SW_SHOWMINNOACTIVE, SW_FORCEMINIMIZE
 
 
-def main():
-    get_window_info()
-
-
-if __name__ == '__main__':
-    main()
+# def main():
+#     update_window_info()
+#     get_window_info()
+#
+#
+# if __name__ == '__main__':
+#     main()
