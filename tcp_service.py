@@ -1,5 +1,6 @@
 import socket
 import threading
+from ctypes import pointer
 
 from window_info import send_window_info, set_terminal_size
 
@@ -13,7 +14,7 @@ def tcp_data_append(data):
     with tcp_list_cv:
         TcpServerService.tcp_data_id += 1
         set_id(data, TcpServerService.tcp_data_id)
-        set_chksum(data)
+        set_checksum(data)
         if len(tcp_data_list) > 100:
             tcp_data_list.clear()
         tcp_data_list.append(data)
@@ -61,10 +62,13 @@ class TcpServerService(object):
             send_window_info() # tell emulator its position and size
 
             recv_data = client.recv(32)
-            if recv_data:
-                # char_array = ctypes.c_char * len(recv_data)
-                width = get_param1(recv_data)
-                height = get_param2(recv_data)
+            if recv_data == sizeof(TcpData):
+                data = TcpData()
+                memmove(pointer(data), recv_data, sizeof(TcpData))
+                width = data.param1
+                height = data.param2
+                # width = get_param1(recv_data)
+                # height = get_param2(recv_data)
                 set_terminal_size(width, height)
 
             snd = threading.Thread(target=self.thread_send, args=(client, addr))

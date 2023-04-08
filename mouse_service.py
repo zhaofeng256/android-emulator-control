@@ -3,7 +3,7 @@ import threading
 import mouse
 
 import tcp_service
-from defs import EventType, TcpData, set_param1, set_param2, ButtonType, KeyEvent, WheelEvent, MapModeStatus, \
+from defs import EventType, TcpData, set_param1_int32, set_param2_int32, ButtonType, KeyEvent, WheelEvent, MapModeStatus, \
     TransPointStatus
 from switch_mode import ModeInfo
 from window_info import get_relative_position
@@ -34,37 +34,37 @@ def mouse_event_callback(evt):
         # print('move', evt.x, evt.y, evt.time)
 
         # send real mouse axis
-        set_param1(data, evt.x)
-        set_param2(data, evt.y)
+        set_param1_int32(data, evt.x)
+        set_param2_int32(data, evt.y)
 
     elif t == mouse._mouse_event.ButtonEvent:
         data.type = EventType.TYPE_MOUSE_BUTTON
         if evt.button == 'left':
-            set_param1(data, ButtonType.LEFT)
+            set_param1_int32(data, ButtonType.LEFT)
         elif evt.button == 'right':
-            set_param1(data, ButtonType.RIGHT)
+            set_param1_int32(data, ButtonType.RIGHT)
         elif evt.button == 'middle':
-            set_param1(data, ButtonType.MIDDLE)
+            set_param1_int32(data, ButtonType.MIDDLE)
         elif evt.button == 'x':
-            set_param1(data, ButtonType.BACK)
+            set_param1_int32(data, ButtonType.BACK)
         elif evt.button == 'x2':
-            set_param1(data, ButtonType.FORWARD)
+            set_param1_int32(data, ButtonType.FORWARD)
         if evt.event_type == 'down' or evt.event_type == 'double':
-            set_param2(data, KeyEvent.KEY_DOWN)
+            set_param2_int32(data, KeyEvent.KEY_DOWN)
         elif evt.event_type == 'up':
-            set_param2(data, KeyEvent.KEY_UP)
+            set_param2_int32(data, KeyEvent.KEY_UP)
         # print('button', evt.button, evt.event_type)
     elif t == mouse._mouse_event.WheelEvent:
         if MouseService.stop_move:
             return
         data.type = EventType.TYPE_MOUSE_WHEEL
         if evt.delta == -1.0:
-            set_param1(data, WheelEvent.ROLL_BACK)
+            set_param1_int32(data, WheelEvent.ROLL_BACK)
             # print('roll back')
         elif evt.delta == 1.0:
-            set_param1(data, WheelEvent.ROLL_FORWARD)
+            set_param1_int32(data, WheelEvent.ROLL_FORWARD)
             # print('roll forward')
-        set_param2(data, 0)
+        set_param2_int32(data, 0)
     else:
         return
 

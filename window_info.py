@@ -5,7 +5,7 @@ import win32gui
 from win32con import SW_SHOWNOACTIVATE
 
 import tcp_service
-from defs import TcpData, set_param1, EventType, SettingType, OFFSET_PARAM_1
+from defs import TcpData, set_param1_int32, EventType, SettingType
 
 
 class WindowInfo:
@@ -39,6 +39,8 @@ def sub_callback(hwnd, extra):
         with WindowInfo.lock:
             WindowInfo.window_pos = rect[0], rect[1]
             WindowInfo.window_size = rect[2] - rect[0] + 1, rect[3] - rect[1] + 1
+            # WindowInfo.window_pos = 0,0
+            # WindowInfo.window_size = 1280,720
             print('window pos:', WindowInfo.window_pos, 'size', WindowInfo.window_size)
         # with extra.condition:
         #     extra.condition.notify_all()
@@ -83,19 +85,19 @@ def send_window_info():
 
     data = TcpData()
     # send window position
-    data.type = EventType.TYPE_SETTING
-    set_param1(data, SettingType.WINDOW_POS)
+    data.type = EventType.TYPE_SET_WINDOW
+    set_param1_int32(data, SettingType.WINDOW_POS)
     a = ctypes.c_int16(window_pos[0])
     b = ctypes.c_int16(window_pos[1])
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1), ctypes.byref(a), 2)
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1 + 2), ctypes.byref(b), 2)
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset), ctypes.byref(a), 2)
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset + 2), ctypes.byref(b), 2)
     tcp_service.tcp_data_append(data)
     # send window size
-    set_param1(data, SettingType.WINDOW_SIZE)
+    set_param1_int32(data, SettingType.WINDOW_SIZE)
     a = ctypes.c_int16(window_size[0])
     b = ctypes.c_int16(window_size[1])
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1), ctypes.byref(a), 2)
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1 + 2), ctypes.byref(b), 2)
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset), ctypes.byref(a), 2)
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset + 2), ctypes.byref(b), 2)
     tcp_service.tcp_data_append(data)
 
 

@@ -1,5 +1,5 @@
 import tcp_service
-from defs import TcpData, EventType, set_param1, set_param2, ControlEvent, MapModeStatus, TransPointStatus, \
+from defs import TcpData, EventType, set_param1_int32, set_param2_int32, ControlEvent, MapModeStatus, TransPointStatus, \
     MainModeType, SubModeType
 
 
@@ -15,8 +15,8 @@ def main_mode_switch(mode):
     print("switch to main mode", mode)
     data = TcpData()
     data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.MAIN_MODE)
-    set_param2(data, int(mode))
+    set_param1_int32(data, ControlEvent.MAIN_MODE)
+    set_param2_int32(data, int(mode))
     tcp_service.tcp_data_append(data)
 
 
@@ -25,11 +25,11 @@ def map_mode_switch():
     print("map mode on is", ModeInfo.map_mode_on)
     data = TcpData()
     data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.MAP_MODE)
+    set_param1_int32(data, ControlEvent.MAP_MODE)
     if ModeInfo.map_mode_on:
-        set_param2(data, MapModeStatus.MAP_MODE_ON)
+        set_param2_int32(data, MapModeStatus.MAP_MODE_ON)
     else:
-        set_param2(data, MapModeStatus.MAP_MODE_OFF)
+        set_param2_int32(data, MapModeStatus.MAP_MODE_OFF)
     tcp_service.tcp_data_append(data)
 
 
@@ -38,9 +38,9 @@ def trans_point_mode_switch():
     print('transparent point mode on is', ModeInfo.transparent_mode_on)
     data = TcpData()
     data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.TRANSPARENT_MODE)
+    set_param1_int32(data, ControlEvent.TRANSPARENT_MODE)
     if ModeInfo.transparent_mode_on:
-        set_param2(data, TransPointStatus.TRANSPARENT_ON)
+        set_param2_int32(data, TransPointStatus.TRANSPARENT_ON)
     else:
-        set_param2(data, TransPointStatus.TRANSPARENT_OFF)
+        set_param2_int32(data, TransPointStatus.TRANSPARENT_OFF)
     tcp_service.tcp_data_append(data)

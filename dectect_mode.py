@@ -11,8 +11,8 @@ import pyautogui
 
 import switch_mode
 import tcp_service
-from defs import TcpData, EventType, set_param1, set_param2, OFFSET_PARAM_1, OFFSET_PARAM_2, LocationType, ControlEvent, \
-    SubModeType, SupplyType, MainModeType
+from defs import TcpData, EventType, set_param1_int32, set_param2_int32, ControlEvent, \
+    SubModeType, SupplyType, MainModeType, MotionType
 from window_info import WindowInfo, get_window_info, get_terminal_size, update_window_info
 
 
@@ -79,8 +79,8 @@ def detect_drive_mode(img):
 def send_sub_mode(mod):
     data = TcpData()
     data.type = EventType.TYPE_CONTROL
-    set_param1(data, ControlEvent.SUB_MODE)
-    set_param2(data, mod)
+    set_param1_int32(data, ControlEvent.SUB_MODE)
+    set_param2_int32(data, mod)
     tcp_service.tcp_data_append(data)
 
 
@@ -155,20 +155,24 @@ def read_panel_axis():
         return axis
 
 
-def send_supply_position(type, id, p):
-    print('send key', id, 'at', p)
+def send_supply_position(v_key_code,  v_pos=(0,0), v_motion=MotionType.MOTION_SYNC, v_vector=(0,0)):
+    print('send key', v_key_code, 'at', v_pos)
     data = TcpData()
-    data.type = EventType.TYPE_ALT_LOCATION
+    data.type = EventType.TYPE_SET_KEY_MOTION
 
-    a = ctypes.c_int16(type)
-    b = ctypes.c_int16(id)
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1), ctypes.byref(a), 2)
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_1 + 2), ctypes.byref(b), 2)
+    v = ctypes.c_uint8(v_key_code)
+    ctypes.memmove(ctypes.byref(data, TcpData.param1.offset), ctypes.byref(v), 1)
+    v = ctypes.c_uint8(v_motion)
+    ctypes.memmove(ctypes.byref(data, TcpData.param1.offset + 1), ctypes.byref(v), 1)
+    v = ctypes.c_int8(v_vector[0])
+    ctypes.memmove(ctypes.byref(data, TcpData.param1.offset + 2), ctypes.byref(v), 1)
+    v = ctypes.c_int8(v_vector[1])
+    ctypes.memmove(ctypes.byref(data, TcpData.param1.offset + 3), ctypes.byref(v), 1)
 
-    a = ctypes.c_int16(p[0])
-    b = ctypes.c_int16(p[1])
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_2), ctypes.byref(a), 2)
-    ctypes.memmove(ctypes.byref(data, OFFSET_PARAM_2 + 2), ctypes.byref(b), 2)
+    v = ctypes.c_uint16(v_pos[0])
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset), ctypes.byref(v), 2)
+    v = ctypes.c_uint16(v_pos[1])
+    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset + 2), ctypes.byref(v), 2)
     tcp_service.tcp_data_append(data)
 
 
@@ -504,7 +508,7 @@ class DetectModeService:
                               (round(f_x - xc), round(f_y - yc)))
 
                         # send F position
-                        send_supply_position(LocationType.ALTER_PANEL, 33, (revt_x(f_x), revt_y(f_y)))
+                        send_supply_position(33,(revt_x(f_x), revt_y(f_y)))
                         if DetectModeService.show_img:
                             cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                         (0, 0, 255), 2)
@@ -528,7 +532,7 @@ class DetectModeService:
                         print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
                               (round(g_x - xc), round(g_y - yc)))
                     # send G
-                    send_supply_position(LocationType.ALTER_PANEL, 34, (revt_x(g_x), revt_y(g_y)))
+                    send_supply_position(34, (revt_x(g_x), revt_y(g_y)))
                     if DetectModeService.show_img:
                         cv2.putText(img2, 'G', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                     (0, 0, 255), 2)
@@ -550,7 +554,7 @@ class DetectModeService:
                             y = revt_y(lst_s[i][1])
 
                             # keys list [H J K L ; ']
-                            send_supply_position(LocationType.SUPPLY_LIST, i + 35, (x, y))
+                            send_supply_position(i + 35, (x, y))
 
                             # print result
                             if t_s == SupplyType.SUPPLY_RANDOM:
@@ -573,20 +577,32 @@ class DetectModeService:
                     if t_s != DetectModeService.bak_t_s:
                         # random ESC
                         if t_s == SupplyType.SUPPLY_RANDOM:
-                            send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.random_supply_close)
+                            send_supply_position(1, DetectModeService.random_supply_close)
+                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5*lst_s[0][3])),
+                                                 MotionType.MOTION_DRAG, (0, round(0-lst_s[0][3])))
+                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                                                 MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.random_supply_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         # system ESC
                         elif t_s == SupplyType.SUPPLY_SYSTEM:
-                            send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.supply_box_close)
+                            send_supply_position(1, DetectModeService.supply_box_close)
+                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * lst_s[0][3])),
+                                                 MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
+                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                                                 MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         # custom ESC and F
                         elif t_s == SupplyType.SUPPLY_CUSTOM:
-                            send_supply_position(LocationType.ALTER_PANEL, 1, DetectModeService.supply_box_close)
-                            send_supply_position(LocationType.ALTER_PANEL, 33, DetectModeService.custom_confirm)
+                            send_supply_position(1, DetectModeService.supply_box_close)
+                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * cnvt_y(176))),
+                                                 MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
+                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * cnvt_y(176))),
+                                                 MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
+                            send_supply_position(33, DetectModeService.custom_confirm)
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -594,7 +610,9 @@ class DetectModeService:
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
                         # none ESC. Later F
                         elif t_s == SupplyType.SUPPLY_NONE:
-                            send_supply_position(LocationType.ALTER_PANEL, 1, (0,0))
+                            send_supply_position(1)
+                            send_supply_position(280)
+                            send_supply_position(281)
 
                     DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
 
@@ -607,9 +625,9 @@ class DetectModeService:
                 if found != DetectModeService.bak_sel_vel:
                     DetectModeService.bak_sel_vel = found
                     if found:
-                        send_supply_position(LocationType.ALTER_PANEL, 16, DetectModeService.pos_prev)
-                        send_supply_position(LocationType.ALTER_PANEL, 18, DetectModeService.pos_next)
-                        send_supply_position(LocationType.ALTER_PANEL, 33, DetectModeService.pos_confirm)
+                        send_supply_position(16, DetectModeService.pos_prev)
+                        send_supply_position(18, DetectModeService.pos_next)
+                        send_supply_position(33, DetectModeService.pos_confirm)
                         if DetectModeService.show_img:
                             cv2.rectangle(2, a, b, (0, 255, 0), 2)
                             cv2.putText(img2, 'Q', cnvt_pos(DetectModeService.pos_prev), cv2.FONT_HERSHEY_SIMPLEX, 1,
@@ -621,8 +639,8 @@ class DetectModeService:
                                         2)
                     else:
                         # disable alter keys
-                        send_supply_position(LocationType.ALTER_PANEL, 16, (0,0))
-                        send_supply_position(LocationType.ALTER_PANEL, 18, (0,0))
+                        send_supply_position(16)
+                        send_supply_position(18)
 
 
                 # 5. find armor off
@@ -636,7 +654,7 @@ class DetectModeService:
                         y = round((a[1]+b[1])/2)
 
                         print('armor off FOUND')
-                        send_supply_position(LocationType.ALTER_PANEL, 33, (x, y))
+                        send_supply_position(33, (x, y))
                         if DetectModeService.show_img:
                             cv2.rectangle(2, a, b, (0, 255, 0), 2)
                             cv2.putText(img2, 'F', cnvt_pos((x,y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
@@ -648,7 +666,7 @@ class DetectModeService:
                 if DetectModeService.f_found != DetectModeService.bak_f_found:
                     DetectModeService.bak_f_found = DetectModeService.f_found
                     if DetectModeService.f_found == [False]*4:
-                        send_supply_position(LocationType.ALTER_PANEL, 33, (0, 0))
+                        send_supply_position(33)
 
                 # 6. find exchange seat
                 j, g_x ,g_y = 0,0,0

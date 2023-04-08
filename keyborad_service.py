@@ -4,7 +4,7 @@ import keyboard
 
 import switch_mode
 import tcp_service
-from defs import TcpData, EventType, KeyEvent, set_param1, set_param2, SubModeType, MainModeType
+from defs import TcpData, EventType, KeyEvent, set_param1_int32, set_param2_int32, SubModeType, MainModeType
 
 current_sub_mode = SubModeType.NONE_SUB_MODE
 
@@ -19,11 +19,11 @@ def key_event_callback(evt):
 
     data = TcpData()
     data.type = EventType.TYPE_KEYBOARD
-    set_param1(data, evt.scan_code)
+    set_param1_int32(data, evt.scan_code)
     if evt.event_type == 'down':
-        set_param2(data, KeyEvent.KEY_DOWN)
+        set_param2_int32(data, KeyEvent.KEY_DOWN)
     elif evt.event_type == 'up':
-        set_param2(data, KeyEvent.KEY_UP)
+        set_param2_int32(data, KeyEvent.KEY_UP)
 
     tcp_service.tcp_data_append(data)
     print(evt.name, evt.scan_code, evt.event_type)
