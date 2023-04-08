@@ -578,9 +578,9 @@ class DetectModeService:
                         # random ESC
                         if t_s == SupplyType.SUPPLY_RANDOM:
                             send_supply_position(1, DetectModeService.random_supply_close)
-                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5*lst_s[0][3])),
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5*lst_s[0][3])),
                                                  MotionType.MOTION_DRAG, (0, round(0-lst_s[0][3])))
-                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
                                                  MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.random_supply_close),
@@ -588,9 +588,9 @@ class DetectModeService:
                         # system ESC
                         elif t_s == SupplyType.SUPPLY_SYSTEM:
                             send_supply_position(1, DetectModeService.supply_box_close)
-                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * lst_s[0][3])),
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * lst_s[0][3])),
                                                  MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
-                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
                                                  MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
@@ -598,9 +598,9 @@ class DetectModeService:
                         # custom ESC and F
                         elif t_s == SupplyType.SUPPLY_CUSTOM:
                             send_supply_position(1, DetectModeService.supply_box_close)
-                            send_supply_position(280, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * cnvt_y(176))),
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * cnvt_y(176))),
                                                  MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
-                            send_supply_position(281, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * cnvt_y(176))),
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * cnvt_y(176))),
                                                  MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             send_supply_position(33, DetectModeService.custom_confirm)
                             if DetectModeService.show_img:
@@ -611,8 +611,8 @@ class DetectModeService:
                         # none ESC. Later F
                         elif t_s == SupplyType.SUPPLY_NONE:
                             send_supply_position(1)
-                            send_supply_position(280)
-                            send_supply_position(281)
+                            send_supply_position(180)
+                            send_supply_position(181)
 
                     DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
 

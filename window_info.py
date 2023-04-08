@@ -83,8 +83,8 @@ def send_window_info():
         window_pos = WindowInfo.window_pos
         window_size = WindowInfo.window_size
 
-    data = TcpData()
     # send window position
+    data = TcpData()
     data.type = EventType.TYPE_SET_WINDOW
     set_param1_int32(data, SettingType.WINDOW_POS)
     a = ctypes.c_int16(window_pos[0])
@@ -92,13 +92,16 @@ def send_window_info():
     ctypes.memmove(ctypes.byref(data, TcpData.param2.offset), ctypes.byref(a), 2)
     ctypes.memmove(ctypes.byref(data, TcpData.param2.offset + 2), ctypes.byref(b), 2)
     tcp_service.tcp_data_append(data)
+
     # send window size
-    set_param1_int32(data, SettingType.WINDOW_SIZE)
+    data1 = TcpData()
+    data1.type = EventType.TYPE_SET_WINDOW
+    set_param1_int32(data1, SettingType.WINDOW_SIZE)
     a = ctypes.c_int16(window_size[0])
     b = ctypes.c_int16(window_size[1])
-    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset), ctypes.byref(a), 2)
-    ctypes.memmove(ctypes.byref(data, TcpData.param2.offset + 2), ctypes.byref(b), 2)
-    tcp_service.tcp_data_append(data)
+    ctypes.memmove(ctypes.byref(data1, TcpData.param2.offset), ctypes.byref(a), 2)
+    ctypes.memmove(ctypes.byref(data1, TcpData.param2.offset + 2), ctypes.byref(b), 2)
+    tcp_service.tcp_data_append(data1)
 
 
 def get_screen_resolution():
