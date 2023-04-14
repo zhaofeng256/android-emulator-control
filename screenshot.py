@@ -955,17 +955,21 @@ def paste_image_file(f):
 def add_panels():
     add_circle_panel(33, 0, 'take_drive', 40, 44)
     add_circle_panel(33, 1, 'door', 25, 29)
-    add_circle_panel(33, 2, 'strop_on', 35, 39)
-    add_circle_panel(33, 3, 'strop_off', 35, 39)
-    add_circle_panel(33, 4, 'tough_on', 35, 39)
-    add_circle_panel(33, 5, 'tough_off', 35, 39)
-    add_circle_panel(33, 6, 'print_vehicle', 20, 35)
-    add_circle_panel(33, 7, 'update_chip', 20, 35)
-    add_circle_panel(33, 8, 'select_weapon', 36, 40)
-    add_circle_panel(33, 9, 'para', 36, 50)
-    add_circle_panel(33, 10, 'hacker', 35, 39)
-    add_rectangle_panel(33, 11, 'pick_hand_yellow', 46, 46)
-    add_rectangle_panel(33, 12, 'pick_hand_white', 46, 46)
+    add_circle_panel(33, 2, 'roll_door', 26, 30)
+    add_circle_panel(33, 3, 'strop_on', 35, 39)
+    add_circle_panel(33, 4, 'strop_off', 35, 39)
+    add_circle_panel(33, 5, 'tough_on', 35, 39)
+    add_circle_panel(33, 6, 'tough_off', 35, 39)
+    add_circle_panel(33, 7, 'print_vehicle', 20, 35)
+    add_circle_panel(33, 8, 'update_chip', 20, 35)
+    add_circle_panel(33, 9, 'select_weapon', 36, 40)
+    add_circle_panel(33, 10, 'para', 36, 50)
+    add_circle_panel(33, 11, 'no_follow', 44, 48)
+    add_circle_panel(33, 12, 'hacker', 35, 39)
+    add_rectangle_panel(33, 13, 'pick_hand_yellow', 46, 46)
+    add_rectangle_panel(33, 14, 'pick_hand_white', 46, 46)
+    add_circle_panel(33, 15, 'grenade', 30, 35)
+    add_circle_panel(33, 16, 'esc', 35, 40)
     add_circle_panel(34, 0, 'drive_by', 40, 44)
     add_rectangle_panel(34, 1, 'pick_box_yellow', 46, 46)
     add_rectangle_panel(34, 2, 'pick_box_white', 46, 46)
@@ -1006,7 +1010,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     # ret, thresh = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)
-    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 11, 2)
 
     contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
@@ -1053,7 +1057,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
                 print(v_name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
 
-
+add_circle_panel(33, 16, 'esc', 35, 40)
 # sift_match('4/armor_off.png', '3/armor_off.png')
 
 # detect_rectangle('6/armor_off.png', 0, 0, 175, 40)
@@ -1062,7 +1066,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
 # grab_cut('3/armor_off.png', 580, 460, 710,  520)
 # grab_cut('3/select_vehicle.png',536, 524, 736, 560)
 # find_homo()
-cut_image('3/', 'print_weapon.png')
+# cut_image('3/', 'esc.png')
 
 
 # detect_circle('3/lean_out.png')
@@ -1077,8 +1081,7 @@ cut_image('3/', 'print_weapon.png')
 # detect_supply_box()
 # detect_random_supply()
 # test_dict()
-# sift_match_zone('1/redbox.png', 'suply', 392, 302, 430, 600)
-# sift_match_zone('1/redbox.png', 'suply', 392, 440, 430, 600)
+
 # if __name__ == '__main__':
 if __name__ == '__':
     test7()

@@ -1,6 +1,5 @@
 import csv
 import ctypes
-import os
 import threading
 import time
 from operator import itemgetter
@@ -13,7 +12,7 @@ import switch_mode
 import tcp_service
 from defs import TcpData, EventType, set_param1_int32, set_param2_int32, ControlEvent, \
     SubModeType, SupplyType, MainModeType, MotionType
-from window_info import WindowInfo, get_window_info, get_terminal_size, update_window_info
+from window_info import get_window_info, get_terminal_size
 
 
 def similar_point(a, b):
@@ -155,7 +154,7 @@ def read_panel_axis():
         return axis
 
 
-def send_supply_position(v_key_code,  v_pos=(0,0), v_motion=MotionType.MOTION_SYNC, v_vector=(0,0)):
+def send_supply_position(v_key_code, v_pos=(0, 0), v_motion=MotionType.MOTION_SYNC, v_vector=(0, 0)):
     print('send key', v_key_code, 'at', v_pos)
     data = TcpData()
     data.type = EventType.TYPE_SET_KEY_MOTION
@@ -210,6 +209,7 @@ def detect_supply_box(img):
         lst = sorted(lst, key=itemgetter(1))
 
     return supply_type, lst
+
 
 def detect_main_mode(img):
     main_mode = -1
@@ -283,7 +283,7 @@ def detect_rectangle_contour(origin, x1, y1, x2, y2, w, h):
     kernel = np.ones((3, 3), np.uint8)
     erosion = cv2.erode(img, kernel, iterations=1)
     gray = cv2.cvtColor(erosion, cv2.COLOR_BGR2GRAY)
-    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+    thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 11, 2)
 
     kernel = np.ones((2, 2), np.uint8)
@@ -326,7 +326,7 @@ def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
     img = img * mask2[:, :, np.newaxis]
 
-    #img_rsz = cv2.resize(img, (800, 400))
+    # img_rsz = cv2.resize(img, (800, 400))
     # cv2.imshow('grab_cut', img_rsz)
     # cv2.waitKey(100)
 
@@ -341,7 +341,7 @@ def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
     # cv2.imshow('closing', img_rsz)
     # cv2.waitKey(100)
 
-    thresh = cv2.adaptiveThreshold(closing, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, \
+    thresh = cv2.adaptiveThreshold(closing, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY, 11, 2)
 
     # img_rsz = cv2.resize(thresh, (800, 400))
@@ -361,7 +361,6 @@ def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
                 a, b = ((left + x, top + y), (left + x + w, top + y + h))
                 # print('rectangle found at', (left + x, top + y))
                 break
-
 
     # cv2.waitKey()
 
@@ -412,7 +411,7 @@ class DetectModeService:
     show_img = False
     custom_confirm = (693, 596)  # red supply enter
     supply_box_close = (851, 217)
-    random_supply_close = (913,217)
+    random_supply_close = (913, 217)
     pos_prev = (500, 500)  # prev vehicle
     pos_next = (775, 500)  # next vehicle
     pos_confirm = (636, 542)  # vehicle confirm
@@ -426,13 +425,14 @@ class DetectModeService:
 
     bak_armor_off = False
 
-    f_found = [False]*4
-    bak_f_found = [False]*4
+    f_found = [False] * 4
+    bak_f_found = [False] * 4
 
     bak_main_mode = -1
     # 32 38 1213 682
-    wd_left, wd_top, wd_width, wd_height = 0,0,1280,720
-    mc_width, mc_height = 1280,720
+    wd_left, wd_top, wd_width, wd_height = 0, 0, 1280, 720
+    mc_width, mc_height = 1280, 720
+
     def __init__(self):
         # 32 38 1213 682
         DetectModeService.wd_left, DetectModeService.wd_top, \
@@ -485,11 +485,12 @@ class DetectModeService:
             # battleground mode
             if switch_mode.ModeInfo.main_mode == MainModeType.BATTLE_GROUND:
                 # 1. find alternate F panels
-                j, f_x , f_y = 0,0,0
+                j, f_x, f_y = 0, 0, 0
                 found = False
                 for i in range(n):
                     if int(axis[i]['key_code']) == 33:
-                        found, f_x, f_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
+                        found, f_x, f_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
+                                                          bf)
                         if found:
                             j = i
                             break
@@ -508,17 +509,18 @@ class DetectModeService:
                               (round(f_x - xc), round(f_y - yc)))
 
                         # send F position
-                        send_supply_position(33,(revt_x(f_x), revt_y(f_y)))
+                        send_supply_position(33, (revt_x(f_x), revt_y(f_y)))
                         if DetectModeService.show_img:
                             cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                         (0, 0, 255), 2)
 
                 # 2. find G panels
-                j, g_x ,g_y = 0,0,0
+                j, g_x, g_y = 0, 0, 0
                 found = False
                 for i in range(n):
                     if int(axis[i]['key_code']) == 34:
-                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
+                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
+                                                          bf)
                         if found:
                             j = i
                             break
@@ -575,34 +577,40 @@ class DetectModeService:
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
                     if t_s != DetectModeService.bak_t_s:
-                        # random ESC
                         if t_s == SupplyType.SUPPLY_RANDOM:
+                            # random ESC
                             send_supply_position(1, DetectModeService.random_supply_close)
-                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5*lst_s[0][3])),
-                                                 MotionType.MOTION_DRAG, (0, round(0-lst_s[0][3])))
-                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                            # slide up
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1])),
+                                                 MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
+                            # slide down
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1])),
                                                  MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.random_supply_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                        # system ESC
                         elif t_s == SupplyType.SUPPLY_SYSTEM:
+                            # system ESC
                             send_supply_position(1, DetectModeService.supply_box_close)
-                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * lst_s[0][3])),
+                            # slide up
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1])),
                                                  MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
-                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * lst_s[0][3])),
+                            # slide down
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1])),
                                                  MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                        # custom ESC and F
                         elif t_s == SupplyType.SUPPLY_CUSTOM:
+                            # custom ESC and F
                             send_supply_position(1, DetectModeService.supply_box_close)
-                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1] + 0.5 * cnvt_y(176))),
-                                                 MotionType.MOTION_DRAG, (0, round(0 - lst_s[0][3])))
-                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1] - 0.5 * cnvt_y(176))),
-                                                 MotionType.MOTION_DRAG, (0, round(lst_s[0][3])))
                             send_supply_position(33, DetectModeService.custom_confirm)
+                            # slide up
+                            send_supply_position(180, (round(lst_s[0][0]), round(lst_s[0][1])),
+                                                 MotionType.MOTION_DRAG, (0, round(0 - cnvt_y(176))))
+                            # slide up
+                            send_supply_position(181, (round(lst_s[0][0]), round(lst_s[0][1])),
+                                                 MotionType.MOTION_DRAG, (0, round(cnvt_y(176))))
                             if DetectModeService.show_img:
                                 cv2.putText(img2, 'ESC', cnvt_pos(DetectModeService.supply_box_close),
                                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -617,8 +625,8 @@ class DetectModeService:
                     DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
 
                 # 4. find select vehicle
-                #found, a, b = detect_select_vehicle(gray)
-                found, a, b = detect_rectangle_grabcut(img, 536, 524, 736, 560, 193, 31);
+                # found, a, b = detect_select_vehicle(gray)
+                found, a, b = detect_rectangle_grabcut(img, 536, 524, 736, 560, 193, 31)
 
                 DetectModeService.f_found[2] = found
 
@@ -642,7 +650,6 @@ class DetectModeService:
                         send_supply_position(16)
                         send_supply_position(18)
 
-
                 # 5. find armor off
                 found, a, b = detect_rectangle_grabcut(img, 580, 460, 710, 520, 96, 35)
                 DetectModeService.f_found[3] = found
@@ -650,14 +657,14 @@ class DetectModeService:
                 if found != DetectModeService.bak_armor_off:
                     DetectModeService.bak_armor_off = found
                     if found:
-                        x = round((a[0]+b[0])/2)
-                        y = round((a[1]+b[1])/2)
+                        x = round((a[0] + b[0]) / 2)
+                        y = round((a[1] + b[1]) / 2)
 
                         print('armor off FOUND')
                         send_supply_position(33, (x, y))
                         if DetectModeService.show_img:
                             cv2.rectangle(2, a, b, (0, 255, 0), 2)
-                            cv2.putText(img2, 'F', cnvt_pos((x,y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                            cv2.putText(img2, 'F', cnvt_pos((x, y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                                         (0, 0, 255), 2)
                     else:
                         print('armor off NOT found')
@@ -665,20 +672,21 @@ class DetectModeService:
                 #  every F panel disappeared
                 if DetectModeService.f_found != DetectModeService.bak_f_found:
                     DetectModeService.bak_f_found = DetectModeService.f_found
-                    if DetectModeService.f_found == [False]*4:
+                    if DetectModeService.f_found == [False] * 4:
                         send_supply_position(33)
 
                 # 6. find exchange seat
-                j, g_x ,g_y = 0,0,0
+                j, g_x, g_y = 0, 0, 0
                 found = False
                 for i in range(n):
                     if int(axis[i]['key_code']) == 58:
-                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift, bf)
+                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
+                                                          bf)
                         if found:
                             j = i
                             break
 
-                if abs(g_x-DetectModeService.bak_ex_x)>10 or abs(g_y-DetectModeService.bak_ex_y)>10:
+                if abs(g_x - DetectModeService.bak_ex_x) > 10 or abs(g_y - DetectModeService.bak_ex_y) > 10:
                     DetectModeService.bak_ex_x = g_x
                     DetectModeService.bak_ex_y = g_y
                     if found:
@@ -720,10 +728,10 @@ class DetectModeService:
             time.sleep(0.1)
 
     def start(self):
-        t = threading.Thread(target=self.detect_thread, args=())
-        t.daemon = True
-        t.start()
-        return t
+        th = threading.Thread(target=self.detect_thread, args=())
+        th.daemon = True
+        th.start()
+        return th
 
 
 def show_full_screen(name):

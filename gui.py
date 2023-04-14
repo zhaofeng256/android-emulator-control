@@ -177,7 +177,7 @@ class WinForm(QWidget):
         script = [
             "shell am start -n com.customscopecommunity.crosshairpro/.MainActivity",
             "shell sleep 2",
-            "shell input tap 543 113w2",
+            "shell input tap 543 1132",
             "shell am start -n com.tencent.tmgp.cod/com.tencent.tmgp.cod.CODMainActivity"
         ]
         self.run_script(script)

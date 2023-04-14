@@ -30,12 +30,13 @@ def key_event_callback(evt):
 
 
 def thread_key():
-    keyboard.hook(key_event_callback)
+    keyboard.hook(key_event_callback, suppress=False)
     keyboard.add_hotkey('alt+f1', switch_mode.main_mode_switch, args=(str(MainModeType.MULTI_PLAYER)))
     keyboard.add_hotkey('alt+f2', switch_mode.main_mode_switch, args=(str(MainModeType.BATTLE_GROUND)))
     keyboard.add_hotkey('alt+f3', switch_mode.main_mode_switch, args=(str(MainModeType.PVE)))
     keyboard.add_hotkey('c', switch_mode.map_mode_switch)
     keyboard.add_hotkey('right shift', switch_mode.trans_point_mode_switch)
+    keyboard.add_hotkey('esc', switch_mode.trans_point_mode_switch)
     keyboard.wait()
 
 
