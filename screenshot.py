@@ -458,12 +458,11 @@ def crop_circle():
     # Save with alpha
     Image.fromarray(npImage).save('1/result.png')
 
-
 def save_circle_panel(src, x, y, r, dst):
     img = Image.open(src)
-    img = img.crop((x - r - 2, y - r - 2, x + r + 2, y + r + 2)).convert("RGB")
+    img = img.crop((x - r, y - r, x + r, y + r)).convert("RGB")
     # img.show()
-    npImage = np.array(img)
+    np_image = np.array(img)
     h, w = img.size
 
     # Create same size alpha layer with circle
@@ -472,22 +471,26 @@ def save_circle_panel(src, x, y, r, dst):
     draw.pieslice(((0, 0), (h, w)), 0, 360, fill=255)
 
     # Convert alpha Image to numpy array
-    npAlpha = np.array(alpha)
+    np_alpha = np.array(alpha)
 
     # Add alpha layer to RGB
-    npImage = np.dstack((npImage, npAlpha))
+    np_image = np.dstack((np_image, np_alpha))
 
     # Save with alpha
-    Image.fromarray(npImage).save(dst)
+    Image.fromarray(np_image).save(dst)
 
+    # here is not for alpha, just easy to sift detect, convert alpha to white
     image = Image.open(dst)
     image.convert("RGBA")
     canvas = Image.new('RGBA', image.size, (255, 255, 255, 255))  # Empty canvas colour (r,g,b,a)
-    canvas.paste(image, mask=image)  # Paste the image onto the canvas, using it's alpha channel as mask
+    canvas.paste(image, mask=image)  # Paste the image onto the canvas, using its alpha channel as mask
     canvas.save(dst, format="PNG")
 
-
 def save_panel_axis(key_code, v_id, v_name, left, top, right, bottom, detect_method):
+    # detect mode
+    # 0: sift match
+    # 1: rect grab
+    # 2: rect cont
     dct = {}
     dct['key_code'] = key_code
     dct['id'] = v_id
@@ -1057,7 +1060,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
                 print(v_name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
 
-add_circle_panel(33, 16, 'esc', 35, 40)
+# add_circle_panel(33, 16, 'esc', 35, 40)
 # sift_match('4/armor_off.png', '3/armor_off.png')
 
 # detect_rectangle('6/armor_off.png', 0, 0, 175, 40)

@@ -8,7 +8,7 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-
+from screenshot import save_circle_panel, save_panel_axis
 
 class Canvas(QWidget):
 
@@ -215,6 +215,15 @@ class MainWindow(QMainWindow):
         self.square = QtWidgets.QRadioButton('square')
         grid.addWidget(self.square)
         self.square.setChecked(False)
+        self.key_code = QtWidgets.QLineEdit('key_code')
+        self.key_code.setValidator(QIntValidator(0, 99))
+        grid.addWidget(self.key_code)
+        self.v_id = QtWidgets.QLineEdit('id')
+        self.v_id.setValidator(QIntValidator(0, 99))
+        grid.addWidget(self.v_id)
+        self.detect_method = QtWidgets.QLineEdit('method')
+        self.detect_method.setValidator(QIntValidator(0, 9))
+        grid.addWidget(self.detect_method)
         self.cut = QtWidgets.QPushButton('cut')
         grid.addWidget(self.cut)
         self.cut_start = QPoint()
@@ -233,6 +242,9 @@ class MainWindow(QMainWindow):
         self.canvas.setWindowFlag(Qt.FramelessWindowHint)
 
         self.on_clicked_select()
+
+    def closeEvent(self, event):
+        self.canvas.close()
 
     def on_clicked_select(self):
         options = QtWidgets.QFileDialog.Options()
@@ -267,42 +279,30 @@ class MainWindow(QMainWindow):
             self.canvas.shape = 2
 
     def on_clicked_cut(self):
-        dst_file = self.out_folder + os.path.basename(self.file)
+        base = os.path.basename(self.file)
+        dst_file = self.out_folder + base
+        prefix = os.path.splitext(base)[0]
         if self.canvas.shape == 0:
             save_circle_panel(self.file, self.canvas.center.x(), self.canvas.center.y(), self.canvas.radius, dst_file)
-        elif self.canvas.shape == 1:
+            start_x = self.canvas.center.x() - self.canvas.radius
+            start_y = self.canvas.center.y() - self.canvas.radius
+            end_x = self.canvas.center.x() + self.canvas.radius
+            end_y = self.canvas.center.y() + self.canvas.radius
+            save_panel_axis(int(self.key_code.text()), int(self.v_id.text()), prefix,
+                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
+
+        elif self.canvas.shape == 1 or self.canvas.shape == 2:
             image = cv2.imread(self.file)
             crop = image[self.canvas.start.y():self.canvas.end.y(), self.canvas.start.x():self.canvas.end.x()]
             cv2.imwrite(dst_file, crop)
-
-
-def save_circle_panel(src, x, y, r, dst):
-    img = Image.open(src)
-    img = img.crop((x - r, y - r, x + r, y + r)).convert("RGB")
-    # img.show()
-    np_image = np.array(img)
-    h, w = img.size
-
-    # Create same size alpha layer with circle
-    alpha = Image.new('L', img.size, 0)
-    draw = ImageDraw.Draw(alpha)
-    draw.pieslice(((0, 0), (h, w)), 0, 360, fill=255)
-
-    # Convert alpha Image to numpy array
-    np_alpha = np.array(alpha)
-
-    # Add alpha layer to RGB
-    np_image = np.dstack((np_image, np_alpha))
-
-    # Save with alpha
-    Image.fromarray(np_image).save(dst)
-
-    # here is not for alpha, just for use, convert alpha to white
-    image = Image.open(dst)
-    image.convert("RGBA")
-    canvas = Image.new('RGBA', image.size, (255, 255, 255, 255))  # Empty canvas colour (r,g,b,a)
-    canvas.paste(image, mask=image)  # Paste the image onto the canvas, using its alpha channel as mask
-    canvas.save(dst, format="PNG")
+            start_x = self.canvas.start.x()
+            start_y = self.canvas.start.y()
+            end_x = self.canvas.end.x()
+            end_y = self.canvas.end.y()
+            print(int(self.key_code.text()), int(self.v_id.text()), os.path.basename(self.file), prefix,
+                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
+            save_panel_axis(int(self.key_code.text()), int(self.v_id.text()), prefix,
+                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
 
 
 if __name__ == '__main__':
