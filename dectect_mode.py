@@ -2,6 +2,7 @@ import csv
 import ctypes
 import threading
 import time
+from collections import OrderedDict
 from operator import itemgetter
 
 import cv2
@@ -150,8 +151,23 @@ def read_panel_axis():
         # for row in reader:
         #     print(row.get('name'))
         f.close()
-        axis = sorted(axis, key=lambda d: d['id'])
-        return axis
+        axis = sorted(axis, key=lambda d: int(d['id']))
+        axis = sorted(axis, key=lambda d: int(d['key_code']))
+
+        keys = []
+        for a in axis:
+            keys.append(a['key_code'])
+        keys = list(dict.fromkeys(keys))
+
+        lst = OrderedDict([])
+        for k in keys:
+            lst[k] = []
+            for a in axis:
+                if a['key_code'] == k:
+                    b = a.copy()
+                    b.pop('key_code')
+                    lst[k].append(b)
+        return lst
 
 
 def send_supply_position(v_key_code, v_pos=(0, 0), v_motion=MotionType.MOTION_SYNC, v_vector=(0, 0)):
@@ -213,7 +229,7 @@ def detect_supply_box(img):
 
 def detect_main_mode(img):
     main_mode = -1
-    found = detect_rectangle_contour(img, 0, 0, 175, 40, 155, 32)
+    found, _, _ = detect_rectangle_contour(img, 0, 0, 175, 40, 155, 32)
     if found:
         main_mode = MainModeType.BATTLE_GROUND
     return main_mode
@@ -326,27 +342,23 @@ def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
     mask2 = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
     img = img * mask2[:, :, np.newaxis]
 
-    # img_rsz = cv2.resize(img, (800, 400))
-    # cv2.imshow('grab_cut', img_rsz)
-    # cv2.waitKey(100)
+    img_rsz = cv2.resize(img, (800, 400))
+    cv2.imshow('grab_cut', img_rsz)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # img_rsz = cv2.resize(gray, (800, 400))
-    # cv2.imshow('gray', img_rsz)
-    # cv2.waitKey(100)
+    img_rsz = cv2.resize(gray, (800, 400))
+    cv2.imshow('gray', img_rsz)
 
     kernel = np.ones((6, 6), np.uint8)
     closing = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
-    # img_rsz = cv2.resize(closing, (800, 400))
-    # cv2.imshow('closing', img_rsz)
-    # cv2.waitKey(100)
+    img_rsz = cv2.resize(closing, (800, 400))
+    cv2.imshow('closing', img_rsz)
 
     thresh = cv2.adaptiveThreshold(closing, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY, 11, 2)
 
-    # img_rsz = cv2.resize(thresh, (800, 400))
-    # cv2.imshow('thresh', img_rsz)
-    # cv2.waitKey(100)
+    img_rsz = cv2.resize(thresh, (800, 400))
+    cv2.imshow('thresh', img_rsz)
 
     contours, hierarchy = cv2.findContours(thresh, 1, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -362,7 +374,7 @@ def detect_rectangle_grabcut(origin, x1, y1, x2, y2, w, h):
                 # print('rectangle found at', (left + x, top + y))
                 break
 
-    # cv2.waitKey()
+    cv2.waitKey()
 
     return found, a, b
 
@@ -433,6 +445,15 @@ class DetectModeService:
     wd_left, wd_top, wd_width, wd_height = 0, 0, 1280, 720
     mc_width, mc_height = 1280, 720
 
+    axis = read_panel_axis()
+    b_found = dict()
+    pos_x = dict()
+    pos_y = dict()
+    for a in axis:
+        b_found[a] = False
+        pos_x[a] = 0
+        pos_y[a] = 0
+
     def __init__(self):
         # 32 38 1213 682
         DetectModeService.wd_left, DetectModeService.wd_top, \
@@ -440,27 +461,27 @@ class DetectModeService:
         DetectModeService.mc_width, DetectModeService.mc_height = get_terminal_size()
 
     def detect_thread(self):
-        axis = read_panel_axis()
+
         sift = cv2.SIFT_create()
         bf = cv2.BFMatcher()
 
-        lsg_img = []
-        lst_rect = []
-        lst_kp = []
-        lst_des = []
+        lsg_img = {}
+        lst_rect = {}
+        lst_kp = {}
+        lst_des = {}
 
-        for d in axis:
-            name = d['name']
-            img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
-            lsg_img.append(img1)
-            left, top, right, bottom = float(d['left']), float(d['top']), float(d['right']), float(d['bottom'])
-            lst_rect.append(cnvt_rect(left, top, right, bottom))
-            kp1, des1 = sift.detectAndCompute(img1, None)
-            lst_kp.append(kp1)
-            lst_des.append(des1)
-            # print(name, 'keypoint num', len(kp1))
+        for a in DetectModeService.axis:
+            for d in DetectModeService.axis[a]:
+                name = d['name']
+                img1 = cv2.imread('4/' + name + '.png', cv2.IMREAD_GRAYSCALE)
+                lsg_img[name] = img1
+                left, top, right, bottom = float(d['left']), float(d['top']), float(d['right']), float(d['bottom'])
+                lst_rect[name] = cnvt_rect(left, top, right, bottom)
+                kp1, des1 = sift.detectAndCompute(img1, None)
+                lst_kp[name] = kp1
+                lst_des[name] = des1
+                # print(name, 'keypoint num', len(kp1))
 
-        n = len(axis)
         n_mode = 0
         while True:
             r = [int(i) for i in cnvt_region(0, 0, DetectModeService.mc_width, DetectModeService.mc_height)]
@@ -484,60 +505,98 @@ class DetectModeService:
 
             # battleground mode
             if switch_mode.ModeInfo.main_mode == MainModeType.BATTLE_GROUND:
-                # 1. find alternate F panels
-                j, f_x, f_y = 0, 0, 0
-                found = False
-                for i in range(n):
-                    if int(axis[i]['key_code']) == 33:
-                        found, f_x, f_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
-                                                          bf)
+                # 1. find alternate  panels
+
+                for a in DetectModeService.axis:
+                    f_x, f_y = 0, 0
+                    found = False
+                    f_name = ''
+
+                    for d in DetectModeService.axis[a]:
+                        f_name = d['name']
+                        method = int(d['detect_method'])
+                        if method == 0:
+                            found, f_x, f_y = sift_match_zone(lsg_img[f_name], gray, lst_rect[f_name], lst_kp[f_name],
+                                                              lst_des[f_name], sift,
+                                                              bf)
+                        elif method == 1:
+                            x1, y1, x2, y2 = lst_rect[f_name]
+                            edge = 6
+                            found, m, n = detect_rectangle_grabcut(img, x1, y1, x2, y2, x2 - x1,
+                                                                   y2 - y1)
+                            f_x = round((m[0] + n[0]) / 2)
+                            f_y = round((m[1] + n[1]) / 2)
+                        elif method == 2:
+                            x1, y1, x2, y2 = lst_rect[f_name]
+                            found, m, n = detect_rectangle_contour(img, x1, y1, x2, y2, x2 - x1,
+                                                                   y2 - y1)
+                            f_x = round((m[0] + n[0]) / 2)
+                            f_y = round((m[1] + n[1]) / 2)
                         if found:
-                            j = i
                             break
 
-                DetectModeService.f_found[0] = found
+                    DetectModeService.f_found[0] = found
 
-                if abs(f_x - DetectModeService.bak_f_x) > 10 or abs(f_y - DetectModeService.bak_f_y) > 10:
-                    DetectModeService.bak_f_x = f_x
-                    DetectModeService.bak_f_y = f_y
+                    if abs(f_x - DetectModeService.pos_x[a]) > 10 or abs(f_y - DetectModeService.pos_y[a]) > 10:
+                        DetectModeService.pos_x[a] = f_x
+                        DetectModeService.pos_y[a] = f_y
 
-                    # print
-                    if found:
-                        xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
-                        yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
-                        print(axis[j]['name'], 'found at', recvt_pos(f_x, f_y), 'center offset is',
-                              (round(f_x - xc), round(f_y - yc)))
-
-                        # send F position
-                        send_supply_position(33, (revt_x(f_x), revt_y(f_y)))
-                        if DetectModeService.show_img:
-                            cv2.putText(img2, 'F', (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255), 2)
-
-                # 2. find G panels
-                j, g_x, g_y = 0, 0, 0
-                found = False
-                for i in range(n):
-                    if int(axis[i]['key_code']) == 34:
-                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
-                                                          bf)
+                        # print
                         if found:
-                            j = i
-                            break
+                            xc = (lst_rect[f_name][0] + lst_rect[f_name][2]) / 2
+                            yc = (lst_rect[f_name][1] + lst_rect[f_name][3]) / 2
+                            print(f_name, 'found at', recvt_pos(f_x, f_y), 'center offset is',
+                                  (round(f_x - xc), round(f_y - yc)))
 
-                if abs(g_x - DetectModeService.bak_g_x) > 10 or abs(g_y - DetectModeService.bak_g_y) > 10:
-                    DetectModeService.bak_g_x, DetectModeService.bak_g_y = g_x, g_y
-                    # print
-                    if found:
-                        xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
-                        yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
-                        print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
-                              (round(g_x - xc), round(g_y - yc)))
-                    # send G
-                    send_supply_position(34, (revt_x(g_x), revt_y(g_y)))
-                    if DetectModeService.show_img:
-                        cv2.putText(img2, 'G', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                    (0, 0, 255), 2)
+                            # send panel position
+                            send_supply_position(int(a), (revt_x(f_x), revt_y(f_y)))
+                            if DetectModeService.show_img:
+                                cv2.putText(img2, a, (round(f_x), round(f_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                            (0, 0, 255), 2)
+
+                        # drive mode switch
+                        if f_name == 'ex_seat':
+                            if found:
+                                # detect vehicle type
+                                # s0 = time.time()
+                                mod, des = detect_drive_mode(gray)
+                                # print('time elapse', time.time() - s0)
+
+                                if SubModeType.NONE_SUB_MODE == mod:
+                                    # type not recognized
+                                    DetectModeService.bak_ex_x = 0
+                                    DetectModeService.bak_ex_y = 0
+                                else:
+                                    print("drive on", des)
+                                    send_sub_mode(mod)
+                            else:
+                                print("drive off")
+                                send_sub_mode(SubModeType.NONE_SUB_MODE)
+                #
+                # # 2. find G panels
+                # j, g_x, g_y = 0, 0, 0
+                # found = False
+                # for i in range(n):
+                #     if int(axis[i]['key_code']) == 34:
+                #         found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
+                #                                           bf)
+                #         if found:
+                #             j = i
+                #             break
+                #
+                # if abs(g_x - DetectModeService.bak_g_x) > 10 or abs(g_y - DetectModeService.bak_g_y) > 10:
+                #     DetectModeService.bak_g_x, DetectModeService.bak_g_y = g_x, g_y
+                #     # print
+                #     if found:
+                #         xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
+                #         yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
+                #         print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
+                #               (round(g_x - xc), round(g_y - yc)))
+                #     # send G
+                #     send_supply_position(34, (revt_x(g_x), revt_y(g_y)))
+                #     if DetectModeService.show_img:
+                #         cv2.putText(img2, 'G', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                     (0, 0, 255), 2)
 
                 # 3. find supply
                 t_s, lst_s = detect_supply(gray)
@@ -623,98 +682,98 @@ class DetectModeService:
                             send_supply_position(181)
 
                     DetectModeService.bak_t_s, DetectModeService.bak_lst_s = t_s, lst_s
-
-                # 4. find select vehicle
-                # found, a, b = detect_select_vehicle(gray)
-                found, a, b = detect_rectangle_grabcut(img, 536, 524, 736, 560, 193, 31)
-
-                DetectModeService.f_found[2] = found
-
-                if found != DetectModeService.bak_sel_vel:
-                    DetectModeService.bak_sel_vel = found
-                    if found:
-                        send_supply_position(16, DetectModeService.pos_prev)
-                        send_supply_position(18, DetectModeService.pos_next)
-                        send_supply_position(33, DetectModeService.pos_confirm)
-                        if DetectModeService.show_img:
-                            cv2.rectangle(2, a, b, (0, 255, 0), 2)
-                            cv2.putText(img2, 'Q', cnvt_pos(DetectModeService.pos_prev), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255), 2)
-                            cv2.putText(img2, 'E', cnvt_pos(DetectModeService.pos_next), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255), 2)
-                            cv2.putText(img2, 'F', cnvt_pos(DetectModeService.pos_confirm), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255),
-                                        2)
-                    else:
-                        # disable alter keys
-                        send_supply_position(16)
-                        send_supply_position(18)
-
-                # 5. find armor off
-                found, a, b = detect_rectangle_grabcut(img, 580, 460, 710, 520, 96, 35)
-                DetectModeService.f_found[3] = found
-
-                if found != DetectModeService.bak_armor_off:
-                    DetectModeService.bak_armor_off = found
-                    if found:
-                        x = round((a[0] + b[0]) / 2)
-                        y = round((a[1] + b[1]) / 2)
-
-                        print('armor off FOUND')
-                        send_supply_position(33, (x, y))
-                        if DetectModeService.show_img:
-                            cv2.rectangle(2, a, b, (0, 255, 0), 2)
-                            cv2.putText(img2, 'F', cnvt_pos((x, y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255), 2)
-                    else:
-                        print('armor off NOT found')
-
-                #  every F panel disappeared
-                if DetectModeService.f_found != DetectModeService.bak_f_found:
-                    DetectModeService.bak_f_found = DetectModeService.f_found
-                    if DetectModeService.f_found == [False] * 4:
-                        send_supply_position(33)
-
-                # 6. find exchange seat
-                j, g_x, g_y = 0, 0, 0
-                found = False
-                for i in range(n):
-                    if int(axis[i]['key_code']) == 58:
-                        found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
-                                                          bf)
-                        if found:
-                            j = i
-                            break
-
-                if abs(g_x - DetectModeService.bak_ex_x) > 10 or abs(g_y - DetectModeService.bak_ex_y) > 10:
-                    DetectModeService.bak_ex_x = g_x
-                    DetectModeService.bak_ex_y = g_y
-                    if found:
-                        # print
-                        xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
-                        yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
-                        print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
-                              (round(g_x - xc), round(g_y - yc)))
-
-                        if DetectModeService.show_img:
-                            cv2.putText(img2, 'EX', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
-                                        (0, 0, 255), 2)
-
-                        # detect vehicle type
-                        # s0 = time.time()
-                        mod, des = detect_drive_mode(gray)
-                        # print('time elapse', time.time() - s0)
-
-                        if SubModeType.NONE_SUB_MODE == mod:
-                            # type not recognized
-                            DetectModeService.bak_ex_x = 0
-                            DetectModeService.bak_ex_y = 0
-                        else:
-                            print("drive on", des)
-                            send_sub_mode(mod)
-                    else:
-                        print("drive off")
-                        send_sub_mode(SubModeType.NONE_SUB_MODE)
+                #
+                # # 4. find select vehicle
+                # # found, a, b = detect_select_vehicle(gray)
+                # found, a, b = detect_rectangle_grabcut(img, 536, 524, 736, 560, 193, 31)
+                #
+                # DetectModeService.f_found[2] = found
+                #
+                # if found != DetectModeService.bak_sel_vel:
+                #     DetectModeService.bak_sel_vel = found
+                #     if found:
+                #         send_supply_position(16, DetectModeService.pos_prev)
+                #         send_supply_position(18, DetectModeService.pos_next)
+                #         send_supply_position(33, DetectModeService.pos_confirm)
+                #         if DetectModeService.show_img:
+                #             cv2.rectangle(2, a, b, (0, 255, 0), 2)
+                #             cv2.putText(img2, 'Q', cnvt_pos(DetectModeService.pos_prev), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                         (0, 0, 255), 2)
+                #             cv2.putText(img2, 'E', cnvt_pos(DetectModeService.pos_next), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                         (0, 0, 255), 2)
+                #             cv2.putText(img2, 'F', cnvt_pos(DetectModeService.pos_confirm), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                         (0, 0, 255),
+                #                         2)
+                #     else:
+                #         # disable alter keys
+                #         send_supply_position(16)
+                #         send_supply_position(18)
+                #
+                # # 5. find armor off
+                # found, a, b = detect_rectangle_grabcut(img, 580, 460, 710, 520, 96, 35)
+                # DetectModeService.f_found[3] = found
+                #
+                # if found != DetectModeService.bak_armor_off:
+                #     DetectModeService.bak_armor_off = found
+                #     if found:
+                #         x = round((a[0] + b[0]) / 2)
+                #         y = round((a[1] + b[1]) / 2)
+                #
+                #         print('armor off FOUND')
+                #         send_supply_position(33, (x, y))
+                #         if DetectModeService.show_img:
+                #             cv2.rectangle(2, a, b, (0, 255, 0), 2)
+                #             cv2.putText(img2, 'F', cnvt_pos((x, y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                         (0, 0, 255), 2)
+                #     else:
+                #         print('armor off NOT found')
+                #
+                # #  every F panel disappeared
+                # if DetectModeService.f_found != DetectModeService.bak_f_found:
+                #     DetectModeService.bak_f_found = DetectModeService.f_found
+                #     if DetectModeService.f_found == [False] * 4:
+                #         send_supply_position(33)
+                #
+                # # 6. find exchange seat
+                # j, g_x, g_y = 0, 0, 0
+                # found = False
+                # for i in range(n):
+                #     if int(axis[i]['key_code']) == 58:
+                #         found, g_x, g_y = sift_match_zone(lsg_img[i], gray, lst_rect[i], lst_kp[i], lst_des[i], sift,
+                #                                           bf)
+                #         if found:
+                #             j = i
+                #             break
+                #
+                # if abs(g_x - DetectModeService.bak_ex_x) > 10 or abs(g_y - DetectModeService.bak_ex_y) > 10:
+                #     DetectModeService.bak_ex_x = g_x
+                #     DetectModeService.bak_ex_y = g_y
+                #     if found:
+                #         # print
+                #         xc = (lst_rect[j][0] + lst_rect[j][2]) / 2
+                #         yc = (lst_rect[j][1] + lst_rect[j][3]) / 2
+                #         print(axis[j]['name'], 'found at', recvt_pos(g_x, g_y), 'center offset is',
+                #               (round(g_x - xc), round(g_y - yc)))
+                #
+                #         if DetectModeService.show_img:
+                #             cv2.putText(img2, 'EX', (round(g_x), round(g_y)), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                #                         (0, 0, 255), 2)
+                #
+                #         # detect vehicle type
+                #         # s0 = time.time()
+                #         mod, des = detect_drive_mode(gray)
+                #         # print('time elapse', time.time() - s0)
+                #
+                #         if SubModeType.NONE_SUB_MODE == mod:
+                #             # type not recognized
+                #             DetectModeService.bak_ex_x = 0
+                #             DetectModeService.bak_ex_y = 0
+                #         else:
+                #             print("drive on", des)
+                #             send_sub_mode(mod)
+                #     else:
+                #         print("drive off")
+                #         send_sub_mode(SubModeType.NONE_SUB_MODE)
 
                 # 6. display result
                 if DetectModeService.show_img:
@@ -745,7 +804,7 @@ def show_full_screen(name):
 if __name__ == '__main__':
     # show_full_screen('print_vehicle_1.png')
     # time.sleep(1)
-    # t = DetectModeService().start()
-    # t.join()
+
     t = DetectModeService().start()
     t.join()
+    # read_panel_axis()

@@ -435,6 +435,65 @@ def sift_match_zone(src, name, x1, y1, x2, y2):
         return False, 0, 0
 
 
+def sift_match_threshold(name1, name2, rect, lower, upper):
+    show_img = True
+    left, top, right, bottom = rect
+
+    origin = cv2.imread(name1)
+    img_hsv = cv2.cvtColor(origin, cv2.COLOR_BGR2HSV)
+    img1 = cv2.inRange(img_hsv, lower, upper)
+
+    origin = cv2.imread(name2)
+    crop = origin[top:bottom, left:right]
+    img_hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    img2 = cv2.inRange(img_hsv, lower, upper)
+
+    sift = cv2.SIFT_create()
+    bf = cv2.BFMatcher()
+
+    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img2, None)
+
+    # matches = bf.match(des1, des2)
+    # matches = sorted(matches, key=lambda val: val.distance)
+    # out = cv2.drawMatches(img1, kp1, img2, kp2, matches, None, flags=2)
+    # img_rsz = cv2.resize(out, (800, 400))
+    # cv2.imshow('sift match', img_rsz)
+    # cv2.waitKey()
+
+    matches = bf.knnMatch(des1, des2, k=2)
+    good = []
+    rs = []
+    for m, n in matches:
+        ratio = m.distance / n.distance
+        if ratio < 0.3:
+            good.append(m)
+            rs.append(ratio)
+
+    min_r = 1
+    n_good = len(good)
+    if n_good > 0:
+        min_r = min(rs)
+    # Draw first 5 matches need in Main Thread
+    if show_img:
+        # out = cv2.drawMatches(img1, kp1, crop, kp2, matches[:5], None, flags=2)
+        if n_good > 2:
+            print('good', n_good, 'best', min_r)
+            for i in range(n_good):
+                print(rs[i], good[i].distance, left + kp2[good[i].trainIdx].pt[0], top + kp2[good[i].trainIdx].pt[1])
+
+            out = cv2.drawMatches(img1, kp1, crop, kp2, good, None, flags=2)
+            img_rsz = cv2.resize(out, (800, 400))
+            cv2.imshow("match", img_rsz)
+            cv2.waitKey()
+
+    if n_good > 0:
+        best = good[np.argmin(rs)]
+        return True, left + kp2[best.trainIdx].pt[0], top + kp2[best.trainIdx].pt[1]
+    else:
+        return False, 0, 0
+
+
 def crop_circle():
     # Open the input image as numpy array, convert to RGB
     img = Image.open("1/drive.png")
@@ -457,6 +516,7 @@ def crop_circle():
 
     # Save with alpha
     Image.fromarray(npImage).save('1/result.png')
+
 
 def save_circle_panel(src, x, y, r, dst):
     img = Image.open(src)
@@ -486,25 +546,33 @@ def save_circle_panel(src, x, y, r, dst):
     canvas.paste(image, mask=image)  # Paste the image onto the canvas, using its alpha channel as mask
     canvas.save(dst, format="PNG")
 
-def save_panel_axis(key_code, v_id, v_name, left, top, right, bottom, detect_method):
+
+def save_panel_axis(key_code, v_name, left, top, right, bottom, detect_method):
     # detect mode
     # 0: sift match
     # 1: rect grab
-    # 2: rect cont
+    # 2: rect contour
+
+    lst = read_panel_axis()
+    for i in range(len(lst)):
+        if lst[i]['name'] == v_name:
+            del lst[i]
+            break
+    n = 0
+    for i in range(len(lst)):
+        if int(lst[i]['key_code']) == key_code:
+            n += 1
+
     dct = {}
     dct['key_code'] = key_code
-    dct['id'] = v_id
+    dct['id'] = n
     dct['name'] = v_name
     dct['left'] = left
     dct['top'] = top
     dct['right'] = right
     dct['bottom'] = bottom
     dct['detect_method'] = detect_method
-    lst = read_panel_axis()
-    for i in range(len(lst)):
-        if lst[i]['name'] == v_name:
-            del lst[i]
-            break
+
     lst.append(dct)
     lst = sorted(lst, key=lambda d: int(d['id']))
     lst = sorted(lst, key=lambda d: int(d['key_code']))
@@ -564,14 +632,14 @@ def detect_circle_panel(file_name, min_radius, max_radius, tag):
         return False, 0, 0, 0
 
 
-def add_circle_panel(key_code, v_id, v_name, min_radius, max_radius):
+def add_circle_panel(key_code, v_name, min_radius, max_radius):
     file = '3/' + v_name + '.png'
     b, x, y, r = detect_circle_panel(file, min_radius, max_radius, v_name)
     if not b:
         return
     xc, yc = x, y
     save_circle_panel(file, x, y, r, '4/' + v_name + '.png')
-    save_panel_axis(key_code, v_id, v_name, x - r, y - r, x + r, y + r, 0)
+    save_panel_axis(key_code, v_name, x - r, y - r, x + r, y + r, 0)
 
     axis = read_panel_axis()
 
@@ -707,6 +775,57 @@ def detect_rectangle_grab_cut(name, left, top, right, bottom):
     img_rsz = cv2.resize(img, (800, 400))
     cv2.imshow('image', img_rsz)
     cv2.waitKey()
+
+
+def detect_rectangle_color(name, left, top, right, bottom, lower, upper, width, height):
+    target_width = width
+    target_height = height
+
+    origin = cv2.imread(name)
+    crop = origin[top:bottom, left:right]
+
+    img_hsv = cv2.cvtColor(crop, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(img_hsv, lower, upper)
+
+    img_rsz = cv2.resize(mask, (800, 400))
+    cv2.imshow('mask', img_rsz)
+
+    kernel = np.ones((3, 3), np.uint8)
+    erosion = cv2.erode(mask, kernel, iterations=1)
+    img_rsz = cv2.resize(erosion, (800, 400))
+    cv2.imshow('erosion', img_rsz)
+
+    # dilation  = cv2.dilate(erosion, kernel, iterations=1)
+    # img_rsz = cv2.resize(dilation , (800, 400))
+    # cv2.imshow('dilation ', img_rsz)
+
+    # kernel = np.ones((1, 7), np.uint8)
+    # closing = cv2.morphologyEx(erosion, cv2.MORPH_CLOSE, kernel)
+    # img_rsz = cv2.resize(closing , (800, 400))
+    # cv2.imshow('closing w', img_rsz)
+    #
+    # kernel = np.ones((7, 1), np.uint8)
+    # closing = cv2.morphologyEx(closing, cv2.MORPH_CLOSE, kernel)
+    # img_rsz = cv2.resize(closing , (800, 400))
+    # cv2.imshow('closing h', img_rsz)
+
+    contours, hierarchy = cv2.findContours(erosion, 1, cv2.CHAIN_APPROX_SIMPLE)
+
+    found = False
+    a, b = (0, 0), (0, 0)
+    for cnt in contours:
+        approx = cv2.approxPolyDP(cnt, 0.01 * cv2.arcLength(cnt, True), True)
+        if len(approx) == 5:
+            x, y, w, h = cv2.boundingRect(cnt)
+            print(w, h)
+            if abs(target_width - w) <= 3 and abs(target_height - h) <= 3:
+                found = True
+                a, b = ((left + x, top + y), (left + x + w, top + y + h))
+                print('rectangle found at', (left + x, top + y))
+                break
+    cv2.waitKey()
+
+    return found, a, b
 
 
 def detect_supply_box():
@@ -956,27 +1075,31 @@ def paste_image_file(f):
 
 
 def add_panels():
-    add_circle_panel(33, 0, 'take_drive', 40, 44)
-    add_circle_panel(33, 1, 'door', 25, 29)
-    add_circle_panel(33, 2, 'roll_door', 26, 30)
-    add_circle_panel(33, 3, 'strop_on', 35, 39)
-    add_circle_panel(33, 4, 'strop_off', 35, 39)
-    add_circle_panel(33, 5, 'tough_on', 35, 39)
-    add_circle_panel(33, 6, 'tough_off', 35, 39)
-    add_circle_panel(33, 7, 'print_vehicle', 20, 35)
-    add_circle_panel(33, 8, 'update_chip', 20, 35)
-    add_circle_panel(33, 9, 'select_weapon', 36, 40)
-    add_circle_panel(33, 10, 'para', 36, 50)
-    add_circle_panel(33, 11, 'no_follow', 44, 48)
-    add_circle_panel(33, 12, 'hacker', 35, 39)
-    add_rectangle_panel(33, 13, 'pick_hand_yellow', 46, 46)
-    add_rectangle_panel(33, 14, 'pick_hand_white', 46, 46)
-    add_circle_panel(33, 15, 'grenade', 30, 35)
-    add_circle_panel(33, 16, 'esc', 35, 40)
-    add_circle_panel(34, 0, 'drive_by', 40, 44)
-    add_rectangle_panel(34, 1, 'pick_box_yellow', 46, 46)
-    add_rectangle_panel(34, 2, 'pick_box_white', 46, 46)
-    add_circle_panel(58, 0, 'ex_seat', 32, 36)
+    add_circle_panel(1, 'esc_continue', 38, 45)
+    save_panel_axis(1, 'esc_settings', 30, 10, 75, 55, 0)
+
+    add_circle_panel(33, 'take_drive', 40, 44)
+    add_circle_panel(33, 'door', 25, 29)
+    add_circle_panel(33, 'roll_door', 26, 30)
+    add_circle_panel(33, 'update_chip', 20, 35)
+    add_circle_panel(33, 'grenade', 30, 35)
+    add_rectangle_panel(33, 'pick_hand_yellow', 46, 46)
+    add_rectangle_panel(33, 'pick_hand_white', 46, 46)
+    add_circle_panel(33, 'strop_on', 35, 39)
+    add_circle_panel(33, 'strop_off', 35, 39)
+    add_circle_panel(33, 'tough_on', 35, 39)
+    add_circle_panel(33, 'tough_off', 35, 39)
+    save_panel_axis(33, 'print_vehicle', 550.402021408081, 472.28199577331543, 605.0180225372314, 526.8979969024658, 0)
+    add_circle_panel(33, 'select_weapon', 36, 40)
+    add_circle_panel(33, 'hacker', 35, 39)
+    add_circle_panel(33, 'para', 36, 50)
+    add_circle_panel(33, 'no_follow', 44, 48)
+
+    add_circle_panel(34, 'drive_by', 40, 44)
+    add_rectangle_panel(34, 'pick_box_yellow', 46, 46)
+    add_rectangle_panel(34, 'pick_box_white', 46, 46)
+
+    add_circle_panel(58, 'ex_seat', 32, 36)
 
 
 def ocr():
@@ -1007,7 +1130,7 @@ def ocr():
     cv2.destroyAllWindows()
 
 
-def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
+def add_rectangle_panel(v_key_code, v_name, width, height):
     file = '3/' + v_name + '.png'
     img = cv2.imread(file)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -1047,7 +1170,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
     panel = panel[top:bottom, left:right]
     cv2.imwrite('4/' + v_name + '.png', panel)
 
-    save_panel_axis(v_key_code, v_id, v_name, left, top, right, bottom, 0)
+    save_panel_axis(v_key_code, v_name, left, top, right, bottom, 0)
     axis = read_panel_axis()
 
     for d in axis:
@@ -1060,7 +1183,7 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
                 print(v_name, 'found at', (x, y), 'center offset is', (x - xc, y - yc))
 
 
-# add_circle_panel(33, 16, 'esc', 35, 40)
+# add_circle_panel(34, 'drive_by', 40, 44)
 # sift_match('4/armor_off.png', '3/armor_off.png')
 
 # detect_rectangle('6/armor_off.png', 0, 0, 175, 40)
@@ -1084,10 +1207,15 @@ def add_rectangle_panel(v_key_code, v_id, v_name, width, height):
 # detect_supply_box()
 # detect_random_supply()
 # test_dict()
+# test7()
+# detect_door()
+# detect_drive()
+# detect_tough_guy()
 
-# if __name__ == '__main__':
-if __name__ == '__':
-    test7()
-    detect_door()
-    detect_drive()
-    detect_tough_guy()
+if __name__ == '__main__':
+    # detect_rectangle_color('3/armor_off.png', 580, 456, 700, 514, np.array([0, 0, 180]), np.array([255, 255, 255]), 188, 27)
+    # detect_rectangle_color('3/select_vehicle.png', 536, 524, 736, 560, np.array([24, 0, 180]), np.array([26, 255, 255]), 188, 27)
+
+    sift_match_threshold('4/select_vehicle.png', '3/select_vehicle.png', (610, 528, 660, 552), np.array([24, 0, 180]),
+                         np.array([26, 255, 255]))
+    # sift_match_threshold('4/armor_off.png', '3/armor_off.png', (621, 477, 663, 501), np.array([0, 0, 180]), np.array([255, 255, 255]))

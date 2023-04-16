@@ -2,13 +2,13 @@ import os
 import sys
 
 import cv2
-import numpy as np
-from PIL import Image, ImageDraw
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
+
 from screenshot import save_circle_panel, save_panel_axis
+
 
 class Canvas(QWidget):
 
@@ -31,8 +31,11 @@ class Canvas(QWidget):
         QShortcut(Qt.Key_Right, self, self.move_right)
         QShortcut(Qt.Key_Up, self, self.move_up)
         QShortcut(Qt.Key_Down, self, self.move_down)
-        QShortcut(Qt.Key_Plus, self, self.zoom_in)
-        QShortcut(Qt.Key_Minus, self, self.zoom_out)
+
+        QShortcut(Qt.CTRL + Qt.Key_Right, self, self.zoom_in_w)
+        QShortcut(Qt.CTRL + Qt.Key_Left, self, self.zoom_out_w)
+        QShortcut(Qt.CTRL + Qt.Key_Up, self, self.zoom_in_h)
+        QShortcut(Qt.CTRL + Qt.Key_Down, self, self.zoom_out_h)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -43,6 +46,14 @@ class Canvas(QWidget):
             self.end = event.pos()
             self.update_position()
             self.update()
+        elif event.button() == Qt.RightButton:
+
+            color = self.image.pixelColor(event.pos())
+            txt = '{},{}  {},{},{}'.format(event.pos().x(),event.pos().y(),color.red(), color.green(), color.blue())
+
+            self.window.color_info.setText(txt)
+            self.window.paint_color = QColor(color)
+            self.window.update()
 
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
@@ -159,14 +170,40 @@ class Canvas(QWidget):
         self.end = QPoint(self.end.x(), self.end.y() + 1)
         self.move()
 
-    def zoom_in(self):
-        self.radius += 1
-        self.end = QPoint(self.end.x() + 1, self.end.y() + 1)
+    def zoom_in_w(self):
+        if self.shape == 0:
+            self.radius += 1
+        elif self.shape == 1:
+            self.end = QPoint(self.end.x() + 1, self.end.y())
+        elif self.shape == 2:
+            self.end = QPoint(self.end.x() + 1, self.end.y() + 1)
         self.move()
 
-    def zoom_out(self):
-        self.radius -= 1
-        self.end = QPoint(self.end.x() - 1, self.end.y() - 1)
+    def zoom_out_w(self):
+        if self.shape == 0:
+            self.radius -= 1
+        elif self.shape == 1:
+            self.end = QPoint(self.end.x() - 1, self.end.y())
+        elif self.shape == 2:
+            self.end = QPoint(self.end.x() - 1, self.end.y() - 1)
+        self.move()
+
+    def zoom_in_h(self):
+        if self.shape == 0:
+            self.radius += 1
+        elif self.shape == 1:
+            self.end = QPoint(self.end.x(), self.end.y() + 1)
+        elif self.shape == 2:
+            self.end = QPoint(self.end.x() + 1, self.end.y() + 1)
+        self.move()
+
+    def zoom_out_h(self):
+        if self.shape == 0:
+            self.radius -= 1
+        elif self.shape == 1:
+            self.end = QPoint(self.end.x(), self.end.y() - 1)
+        elif self.shape == 2:
+            self.end = QPoint(self.end.x() - 1, self.end.y() - 1)
         self.move()
 
     def update_position(self):
@@ -196,7 +233,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.canvas = None
         self.file = None
-        self.out_folder = 'crop/'
+        self.out_folder = '4/'
+        self.paint_color = Qt.white
         if not QFileInfo(self.out_folder).exists():
             os.mkdir(self.out_folder)
 
@@ -230,6 +268,10 @@ class MainWindow(QMainWindow):
         self.cut_end = QPoint()
         self.cut_position = QtWidgets.QLabel('', self)
         grid.addWidget(self.cut_position)
+        self.color = QtWidgets.QLabel('', self)
+        grid.addWidget(self.color)
+        self.color_info = QtWidgets.QLabel('', self)
+        grid.addWidget(self.color_info)
 
         self.get_file.clicked.connect(self.on_clicked_select)
         self.circle.clicked.connect(self.on_clicked_circle)
@@ -245,6 +287,12 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         self.canvas.close()
+
+    def paintEvent(self, event):
+        qp = QPainter(self)
+        qp.setPen(Qt.black)
+        qp.setBrush(self.paint_color)
+        qp.drawRect(self.color.geometry())
 
     def on_clicked_select(self):
         options = QtWidgets.QFileDialog.Options()
@@ -288,8 +336,8 @@ class MainWindow(QMainWindow):
             start_y = self.canvas.center.y() - self.canvas.radius
             end_x = self.canvas.center.x() + self.canvas.radius
             end_y = self.canvas.center.y() + self.canvas.radius
-            save_panel_axis(int(self.key_code.text()), int(self.v_id.text()), prefix,
-                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
+            save_panel_axis(int(self.key_code.text()), prefix,
+                            start_x, start_y, end_x, end_y, int(self.detect_method.text()))
 
         elif self.canvas.shape == 1 or self.canvas.shape == 2:
             image = cv2.imread(self.file)
@@ -299,10 +347,10 @@ class MainWindow(QMainWindow):
             start_y = self.canvas.start.y()
             end_x = self.canvas.end.x()
             end_y = self.canvas.end.y()
-            print(int(self.key_code.text()), int(self.v_id.text()), os.path.basename(self.file), prefix,
-                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
-            save_panel_axis(int(self.key_code.text()), int(self.v_id.text()), prefix,
-                        start_x, start_y, end_x, end_y, int(self.detect_method.text()))
+            print(int(self.key_code.text()), int(self.v_id.text()), prefix,
+                  start_x, start_y, end_x, end_y, int(self.detect_method.text()))
+            save_panel_axis(int(self.key_code.text()), prefix,
+                            start_x, start_y, end_x, end_y, int(self.detect_method.text()))
 
 
 if __name__ == '__main__':
