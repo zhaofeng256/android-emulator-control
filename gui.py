@@ -132,11 +132,24 @@ class WinForm(QWidget):
         self.bt_stop_jump.clicked.connect(self.bt_stop_jump_clicked)
         layout.addWidget(self.bt_stop_jump, 5, 0, 1, 1, QtCore.Qt.AlignCenter)
 
+        self.bt_walk = QPushButton("walk", self)
+        self.bt_walk.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_walk.clicked.connect(self.bt_walk_clicked)
+        layout.addWidget(self.bt_walk, 5, 1, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_stop_walk = QPushButton("stop_walk", self)
+        self.bt_stop_walk.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_stop_walk.clicked.connect(self.bt_stop_walk_clicked)
+        layout.addWidget(self.bt_stop_walk, 5, 2, 1, 1, QtCore.Qt.AlignCenter)
+
         self.running = False
         self.bt_stop_run.setDisabled(True)
 
         self.jumping = False
         self.bt_stop_jump.setDisabled(True)
+
+        self.walking = False
+        self.bt_stop_walk.setDisabled(True)
 
     def bt_refresh_clicked(self):
         pipe = subprocess.Popen('adb kill-server', stdout=subprocess.PIPE)
@@ -305,6 +318,46 @@ class WinForm(QWidget):
     def bt_stop_jump_clicked(self):
         self.jumping = False
         self.bt_stop_jump.setDisabled(True)
+
+    def thread_walk(self):
+        self.bt_walk.setDisabled(True)
+        self.bt_stop_walk.setEnabled(True)
+
+        if not self.walking:
+            self.walking = True
+            self.bt_refresh.setDisabled(True)
+            while self.walking:
+                script = (['shell input touchscreen swipe 200 500 200 480 100',
+                           'shell input touchscreen swipe 200 500 200 520 100',
+                           'shell input tap 1212 508'])
+                time.sleep(5)
+                cnt = self.combobox_devices.count()
+                for n in range(cnt):
+                    if n == 0:
+                        continue
+
+                    device_name = self.combobox_devices.itemText(n)
+                    cmd = "adb -s " + device_name + " "
+
+                    for i in range(len(script)):
+                        print(cmd + script[i])
+                        pipe = subprocess.Popen(cmd + script[i], stdout=subprocess.PIPE)
+                        out = pipe.communicate()[0]
+                        print(out.decode())
+
+                time.sleep(1)
+                print('walking...')
+
+        self.bt_walk.setEnabled(True)
+        self.bt_stop_walk.setDisabled(True)
+        self.bt_refresh.setEnabled(True)
+
+    def bt_walk_clicked(self):
+        threading.Thread(target=self.thread_walk).start()
+
+    def bt_stop_walk_clicked(self):
+        self.walking = False
+        self.bt_stop_walk.setDisabled(True)
 
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
