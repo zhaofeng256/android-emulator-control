@@ -30,7 +30,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusBar)
         self.setWindowTitle("android emulator control")
         self.move(
-            QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30, 60)
+            QApplication.desktop().screen().rect().bottomRight() - self.rect().center() - QPoint(30, 100)
         )
 
     def closeEvent(self, event):
@@ -44,7 +44,7 @@ class WinForm(QWidget):
         super(WinForm, self).__init__(parent=None)
 
         layout = QGridLayout()
-        layout.setColumnStretch(3, 4)
+        layout.setColumnStretch(3, 5)
         self.setLayout(layout)
 
         self.transparent_window = 0
@@ -117,17 +117,42 @@ class WinForm(QWidget):
         self.bt_transparent_board.clicked.connect(self.bt_transparent_board_clicked)
         layout.addWidget(self.bt_transparent_board, 4, 0, 1, 1, QtCore.Qt.AlignCenter)
 
+        self.bt_home = QPushButton("home", self)
+        self.bt_home.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_home.clicked.connect(self.bt_home_clicked)
+        layout.addWidget(self.bt_home, 4, 1, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_jump = QPushButton("jump", self)
+        self.bt_jump.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_jump.clicked.connect(self.bt_jump_clicked)
+        layout.addWidget(self.bt_jump, 4, 2, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_stop_jump = QPushButton("stop_jump", self)
+        self.bt_stop_jump.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_stop_jump.clicked.connect(self.bt_stop_jump_clicked)
+        layout.addWidget(self.bt_stop_jump, 5, 0, 1, 1, QtCore.Qt.AlignCenter)
+
         self.running = False
         self.bt_stop_run.setDisabled(True)
 
+        self.jumping = False
+        self.bt_stop_jump.setDisabled(True)
+
     def bt_refresh_clicked(self):
+        pipe = subprocess.Popen('adb kill-server', stdout=subprocess.PIPE)
+        pipe.terminate()
+        pipe = subprocess.Popen('adb devices', stdout=subprocess.PIPE)
+        pipe.terminate()
+        pipe = subprocess.Popen('adb reconnect offline', stdout=subprocess.PIPE)
+        pipe.terminate()
         pipe = subprocess.Popen("adb devices", stdout=subprocess.PIPE)
         out = pipe.communicate()[0]
+        pipe.terminate()
         s = out.decode()
         x = re.findall('\r\n(.+?)\t', s)
 
         for i in range(self.combobox_devices.count()):
-            self.combobox_devices.removeItem(i)
+            self.combobox_devices.removeItem(0)
 
         for i in range(len(x)):
             print(x[i])
@@ -206,6 +231,12 @@ class WinForm(QWidget):
         ]
         self.run_script(script)
 
+    def bt_home_clicked(self):
+        script = [
+            'shell input keyevent 3'
+        ]
+        self.run_script(script)
+
     def run_script(self, script):
         device_name = self.combobox_devices.currentText()
         cmd = "adb -s " + device_name + " "
@@ -237,6 +268,43 @@ class WinForm(QWidget):
         else:
             self.transparent_window.hide()
 
+    def thread_jump(self):
+        self.bt_jump.setDisabled(True)
+        self.bt_stop_jump.setEnabled(True)
+
+        if not self.jumping:
+            self.jumping = True
+            self.bt_refresh.setDisabled(True)
+            while self.jumping:
+                script = (['shell input tap 1212 508'])
+
+                cnt = self.combobox_devices.count()
+                for n in range(cnt):
+                    if n == 0:
+                        continue
+
+                    device_name = self.combobox_devices.itemText(n)
+                    cmd = "adb -s " + device_name + " "
+
+                    for i in range(len(script)):
+                        print(cmd + script[i])
+                        pipe = subprocess.Popen(cmd + script[i], stdout=subprocess.PIPE)
+                        out = pipe.communicate()[0]
+                        print(out.decode())
+
+                time.sleep(1)
+                print('jumping...')
+
+        self.bt_jump.setEnabled(True)
+        self.bt_stop_jump.setDisabled(True)
+        self.bt_refresh.setEnabled(True)
+
+    def bt_jump_clicked(self):
+        threading.Thread(target=self.thread_jump).start()
+
+    def bt_stop_jump_clicked(self):
+        self.jumping = False
+        self.bt_stop_jump.setDisabled(True)
 
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
@@ -290,7 +358,7 @@ def main():
         mw.setCentralWidget(wf)
 
         TcpServerService('', defs.TCP_PORT).start()
-        MouseService.set_statusbar(mw.sss)        # wf.setStatusTip("pos:" + str(info.window_pos))
+        MouseService.set_statusbar(mw.sss)  # wf.setStatusTip("pos:" + str(info.window_pos))
         MouseService.start()
         KeyboardService.start()
         DetectModeService().start()
