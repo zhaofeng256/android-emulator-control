@@ -13,11 +13,11 @@ from PyQt5.QtWidgets import QApplication, QWidget, QGridLayout, QPushButton, QCo
     QMainWindow
 
 import defs
-from dectect_mode import DetectModeService
-from keyborad_service import KeyboardService
-from mouse_service import MouseService
-from tcp_service import TcpServerService
-from window_info import get_window_info, update_window_info
+# from dectect_mode import DetectModeService
+# from keyborad_service import KeyboardService
+# from mouse_service import MouseService
+# from tcp_service import TcpServerService
+# from window_info import get_window_info, update_window_info
 
 
 class MainWindow(QMainWindow):
@@ -35,7 +35,8 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         mouse.unhook_all()
-        self.centralWidget().transparent_window.close()
+        if self.centralWidget().transparent_window:
+            self.centralWidget().transparent_window.close()
         event.accept()
 
 
@@ -153,16 +154,29 @@ class WinForm(QWidget):
 
     def bt_refresh_clicked(self):
         pipe = subprocess.Popen('adb kill-server', stdout=subprocess.PIPE)
+        out = pipe.communicate()[0]
+        s = out.decode()
+        print('adb kill-server' + ':\n' + s)
         pipe.terminate()
+
         pipe = subprocess.Popen('adb devices', stdout=subprocess.PIPE)
+        out = pipe.communicate()[0]
+        s = out.decode()
+        print('adb devices' + ':\n' + out.decode())
         pipe.terminate()
+
         pipe = subprocess.Popen('adb reconnect offline', stdout=subprocess.PIPE)
+        out = pipe.communicate()[0]
+        s = out.decode()
+        print('adb reconnect offline' + ':\n' + s)
         pipe.terminate()
+
         pipe = subprocess.Popen("adb devices", stdout=subprocess.PIPE)
         out = pipe.communicate()[0]
-        pipe.terminate()
         s = out.decode()
         x = re.findall('\r\n(.+?)\t', s)
+        print('adb devices' + ':\n' + s)
+        pipe.terminate()
 
         for i in range(self.combobox_devices.count()):
             self.combobox_devices.removeItem(0)
@@ -396,25 +410,25 @@ def main():
         wf = WinForm()
         wf.bt_refresh_clicked()
 
-        wf.transparent_window = TransparentWindow()
-        wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
-        wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
-        wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
+        # wf.transparent_window = TransparentWindow()
+        # wf.transparent_window.setWindowFlags(Qt.FramelessWindowHint)
+        # wf.transparent_window.setAttribute(Qt.WA_NoSystemBackground, True)
+        # wf.transparent_window.setAttribute(Qt.WA_TranslucentBackground, True)
 
-        update_window_info()
-        x, y, w, h = get_window_info()
-        wf.transparent_window.move(x - 5, y - 5)
-        wf.transparent_window.setFixedSize(w + 10, h + 10)
-        # wf.transparent_window.show()
+        # update_window_info()
+        # x, y, w, h = get_window_info()
+        # wf.transparent_window.move(x - 5, y - 5)
+        # wf.transparent_window.setFixedSize(w + 10, h + 10)
+        # # wf.transparent_window.show()
 
         mw = MainWindow()
         mw.setCentralWidget(wf)
 
-        TcpServerService('', defs.TCP_PORT).start()
-        MouseService.set_statusbar(mw.sss)  # wf.setStatusTip("pos:" + str(info.window_pos))
-        MouseService.start()
-        KeyboardService.start()
-        DetectModeService().start()
+        # TcpServerService('', defs.TCP_PORT).start()
+        # MouseService.set_statusbar(mw.sss)  # wf.setStatusTip("pos:" + str(info.window_pos))
+        # MouseService.start()
+        # KeyboardService.start()
+        # DetectModeService().start()
 
         mw.show()
 
