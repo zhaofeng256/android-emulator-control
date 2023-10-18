@@ -343,7 +343,8 @@ class WinForm(QWidget):
             while self.walking:
                 script = (['shell input touchscreen swipe 200 500 200 480 100',
                            'shell input touchscreen swipe 200 500 200 520 100',
-                           'shell input tap 1212 508'])
+                           #'shell input tap 1212 508'
+                        ])
                 time.sleep(5)
                 cnt = self.combobox_devices.count()
                 for n in range(cnt):
