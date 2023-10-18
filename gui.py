@@ -162,7 +162,7 @@ class WinForm(QWidget):
         pipe = subprocess.Popen('adb devices', stdout=subprocess.PIPE)
         out = pipe.communicate()[0]
         s = out.decode()
-        print('adb devices' + ':\n' + out.decode())
+        print('adb devices' + ':\n' + s)
         pipe.terminate()
 
         pipe = subprocess.Popen('adb reconnect offline', stdout=subprocess.PIPE)
