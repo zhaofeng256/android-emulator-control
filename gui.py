@@ -1,4 +1,6 @@
 import ctypes
+import os
+import pathlib
 import re
 import subprocess
 import sys
@@ -45,7 +47,7 @@ class WinForm(QWidget):
         super(WinForm, self).__init__(parent=None)
 
         layout = QGridLayout()
-        layout.setColumnStretch(3, 5)
+        layout.setColumnStretch(3, 6)
         self.setLayout(layout)
 
         self.transparent_window = 0
@@ -142,6 +144,16 @@ class WinForm(QWidget):
         self.bt_stop_walk.setFixedSize(self.cell_width, self.cell_high)
         self.bt_stop_walk.clicked.connect(self.bt_stop_walk_clicked)
         layout.addWidget(self.bt_stop_walk, 5, 2, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_update_walk = QPushButton("push_walk", self)
+        self.bt_update_walk.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_update_walk.clicked.connect(self.bt_update_walk_clicked)
+        layout.addWidget(self.bt_update_walk, 6, 0, 1, 1, QtCore.Qt.AlignCenter)
+
+        self.bt_kill_walk = QPushButton("kill_walk", self)
+        self.bt_kill_walk.setFixedSize(self.cell_width, self.cell_high)
+        self.bt_kill_walk.clicked.connect(self.bt_kill_walk_clicked)
+        layout.addWidget(self.bt_kill_walk, 6, 1, 1, 1, QtCore.Qt.AlignCenter)
 
         self.running = False
         self.bt_stop_run.setDisabled(True)
@@ -272,6 +284,7 @@ class WinForm(QWidget):
             print(cmd + script[i])
             pipe = subprocess.Popen(cmd + script[i], stdout=subprocess.PIPE)
             out = pipe.communicate()[0]
+            pipe.terminate()
             print(out.decode())
 
     def bt_stop_move_clicked(self):
@@ -341,27 +354,71 @@ class WinForm(QWidget):
             self.walking = True
             self.bt_refresh.setDisabled(True)
             while self.walking:
-                script = (['shell input touchscreen swipe 200 500 200 480 100',
-                           'shell input touchscreen swipe 200 500 200 520 100',
-                           #'shell input tap 1212 508'
-                        ])
-                time.sleep(5)
+                script = '"input touchscreen swipe 200 500 200 480 100;\
+                           input touchscreen swipe 200 500 200 520 100;"'
+                           #input tap 80 326"'
+                           #'input tap 1212 508'
                 cnt = self.combobox_devices.count()
                 for n in range(cnt):
                     if n == 0:
                         continue
 
                     device_name = self.combobox_devices.itemText(n)
-                    cmd = "adb -s " + device_name + " "
+                    cmd = "adb -s " + device_name + " shell "
+                    print(cmd + script)
 
+                    try:
+                        # method 1
+                        #pipe = subprocess.Popen(cmd + script, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                        #print(pipe.stdout.read().decode())
+                        #pipe.terminate()
+
+                        # method 2
+                        #result = subprocess.run(cmd + script, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding='utf-8')
+                        #print(device_name + ' walking...' + result.stdout)
+
+                        # method 3
+                        result = subprocess.check_output(cmd + script)
+                        print(device_name + ' walking...' + result.decode())
+                    except:
+                        print(device_name + ' is offline')
+                        self.walking = False
+
+        self.bt_walk.setEnabled(True)
+        self.bt_stop_walk.setDisabled(True)
+        self.bt_refresh.setEnabled(True)
+        self.bt_refresh_clicked()
+
+    def thread_adb_cmd(self, cmd):
+        t0 = time.time()
+        result = subprocess.check_output(cmd)
+        t1 = time.time()
+        print(result.decode(), t1 - t0)
+
+    def run_adb_cmd(self, cmd):
+        threading.Thread(target=self.thread_adb_cmd, args=(cmd,)).start()
+
+    def thread_walk_1(self):
+        self.bt_walk.setDisabled(True)
+        self.bt_stop_walk.setEnabled(True)
+        if not self.walking:
+            self.walking = True
+            self.bt_refresh.setDisabled(True)
+
+            while self.walking:
+                script = ['input touchscreen swipe 200 500 200 480 100',
+                          'input touchscreen swipe 200 500 200 520 100',
+                          'input tap 80 326']
+                cnt = self.combobox_devices.count()
+                for n in range(cnt):
+                    if n == 0:
+                        continue
+                    device_name = self.combobox_devices.itemText(n)
+                    cmd = "adb -s " + device_name + " shell "
                     for i in range(len(script)):
                         print(cmd + script[i])
-                        pipe = subprocess.Popen(cmd + script[i], stdout=subprocess.PIPE)
-                        out = pipe.communicate()[0]
-                        print(out.decode())
-
-                time.sleep(1)
-                print('walking...')
+                        self.run_adb_cmd(cmd + script[i])
+                time.sleep(3)
 
         self.bt_walk.setEnabled(True)
         self.bt_stop_walk.setDisabled(True)
@@ -373,6 +430,38 @@ class WinForm(QWidget):
     def bt_stop_walk_clicked(self):
         self.walking = False
         self.bt_stop_walk.setDisabled(True)
+
+    def bt_update_walk_clicked(self):
+        p = os.path.abspath(os.getcwd()) + '\walk.sh'
+        script = [
+            'killall sh',
+            r'push ' + p + ' /data/local/tmp',
+            'shell chmod a+x /data/local/tmp/walk.sh',
+            'shell sync'
+        ]
+        cnt = self.combobox_devices.count()
+        for n in range(cnt):
+            #if n == 0:
+                #continue
+            device_name = self.combobox_devices.itemText(n)
+            cmd = "adb -s " + device_name + " "
+            for i in range(len(script)):
+                print(cmd + script[i])
+                pipe = subprocess.Popen(cmd + script[i], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                print(pipe.stdout.read().decode())
+                pipe.terminate()
+
+    def bt_kill_walk_clicked(self):
+        cnt = self.combobox_devices.count()
+        for n in range(cnt):
+            #if n == 0:
+                #continue
+            device_name = self.combobox_devices.itemText(n)
+            cmd = "adb -s " + device_name + " killall sh"
+            print(cmd)
+            pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            print(pipe.stdout.read().decode())
+            pipe.terminate()
 
 class TransparentWindow(QWidget):
     def paintEvent(self, event=None):
